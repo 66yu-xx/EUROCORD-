@@ -1,8 +1,9 @@
 import { initialData } from './data.js';
 import { calculateMaterialRequirements, getSummary } from './mrp.js';
+import { loadData, resetStoredData, saveData } from './storage.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
-let data = clone(initialData);
+let data = loadData(initialData);
 let currentPage = 'dashboard';
 let toastTimer;
 
@@ -33,7 +34,7 @@ function appShell(content) {
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">M</div><div><strong>MRP LITE</strong><small>物料需求计划</small></div></div>
       <nav><p>工作台</p>${pages.map(([id, label, ico]) => `<button class="nav-item ${currentPage === id ? 'active' : ''}" data-page="${id}">${icon(ico)}<span>${label}</span>${id === 'analysis' && getSummary(data).shortageCount ? `<b>${getSummary(data).shortageCount}</b>` : ''}</button>`).join('')}</nav>
-      <div class="sidebar-footer"><div class="demo-dot"></div><div><strong>演示环境</strong><small>数据保存在当前会话</small></div></div>
+      <div class="sidebar-footer"><div class="demo-dot"></div><div><strong>演示环境</strong><small>数据保存在此浏览器</small></div><button class="reset-button" data-action="reset-data" title="重置演示数据"><b>↺</b><span>重置演示数据</span></button></div>
     </aside>
     <main><header><div><small>MRP LITE V1 / ${active[1]}</small><h1>${active[1]}</h1></div><div class="header-actions"><span class="date">${new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date())}</span><button class="avatar">演</button></div></header><section class="content">${content}</section></main>
     <div id="modal-root"></div><div id="toast" class="toast"></div>
@@ -111,12 +112,21 @@ function updateOrder(productId, qty) {
   let order = data.orders.find((o) => o.productId === productId);
   if (!order) { order = { productId, orderQty: 0 }; data.orders.push(order); }
   order.orderQty = Math.max(0, Number(qty) || 0);
+  saveData(data);
   const total = data.orders.reduce((s, o) => s + Number(o.orderQty), 0);
   const totalEl = document.querySelector('#order-total'); if (totalEl) totalEl.textContent = `${format(total)} 台`;
 }
 
 function handleAction(action, dataset) {
   if (action === 'analyze') return navigate('analysis');
+  if (action === 'reset-data') {
+    if (!window.confirm('确定要重置所有演示数据吗？此操作将恢复初始产品、物料、BOM、库存和订单。')) return;
+    resetStoredData();
+    data = clone(initialData);
+    sessionStorage.removeItem('selectedProduct');
+    render();
+    return toast('演示数据已重置');
+  }
   if (action === 'add-product' || action === 'edit-product') return productModal(dataset.id);
   if (action === 'add-material' || action === 'edit-material') return materialModal(dataset.id);
   if (action === 'add-bom' || action === 'edit-bom') return bomModal(dataset.product, dataset.material);
@@ -128,7 +138,7 @@ function showModal(title, body, onSubmit) {
   root.innerHTML = `<div class="modal-backdrop"><form class="modal"><div class="modal-head"><div><span class="kicker">MRP LITE</span><h3>${title}</h3></div><button type="button" class="modal-close">×</button></div><div class="modal-body">${body}</div><div class="modal-actions"><button type="button" class="secondary modal-cancel">取消</button><button class="primary" type="submit">保存</button></div></form></div>`;
   const close = () => root.innerHTML = '';
   root.querySelector('.modal-close').onclick = close; root.querySelector('.modal-cancel').onclick = close; root.querySelector('.modal-backdrop').onclick = (e) => { if (e.target === e.currentTarget) close(); };
-  root.querySelector('form').onsubmit = (e) => { e.preventDefault(); onSubmit(new FormData(e.target)); close(); render(); toast('保存成功，相关数据已更新'); };
+  root.querySelector('form').onsubmit = (e) => { e.preventDefault(); onSubmit(new FormData(e.target)); saveData(data); close(); render(); toast('保存成功，相关数据已更新'); };
 }
 
 const field = (label, name, value = '', type = 'text', extra = '') => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" value="${value}" ${extra} required /></label>`;

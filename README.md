@@ -16,10 +16,11 @@ python -m http.server 8080
 
 ## 代码结构
 
-- `src/data.js`：本地演示数据，可继续增加产品、物料、BOM 和库存
+- `src/data.js`：初始演示数据，可继续增加产品、物料、BOM 和库存
+- `src/storage.js`：浏览器 LocalStorage 数据保存、读取与重置
 - `src/mrp.js`：独立 MRP 需求计算和状态规则
 - `src/app.js`：页面、路由与本地交互
 - `src/styles.css`：界面样式
 - `tests/mrp.test.js`：计算逻辑测试
 
-刷新页面会恢复初始演示数据，不会写入数据库或浏览器永久存储。
+产品、物料、BOM、库存和订单模拟数据保存在当前浏览器的 LocalStorage 中，刷新页面后仍会保留。点击左侧底部的“重置演示数据”可恢复初始数据。数据不会上传到服务器或写入数据库。
