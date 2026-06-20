@@ -24,15 +24,17 @@ Active Development
 - 库存状态引擎
 - 库存预警展示
 
-## 当前进行中
+## Current Focus
 
-- V2.3 项目文档基线
+V2.3.1 Product Philosophy
 
-## 下一阶段
+## Next Phase
 
-- V3 采购周期
+V3 Procurement Cycle
+
+## 后续路线
+
 - V4 替代料
 - V5 供应商
 - V6 采购建议
 - V7 生产计划
-
