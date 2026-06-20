@@ -47,6 +47,13 @@ test('库存等于需求且安全库存大于零时状态为库存低', () => {
   assert.equal(result.status, '库存低');
 });
 
+test('库存高于需求但剩余库存低于安全库存时状态为库存低', () => {
+  const result = calculateBoundaryResult(14, 5);
+  assert.equal(result.remainingQty, 4);
+  assert.equal(result.shortageQty, 0);
+  assert.equal(result.status, '库存低');
+});
+
 test('剩余库存等于安全库存时状态为充足', () => {
   const result = calculateBoundaryResult(15, 5);
   assert.equal(result.remainingQty, result.safetyStock);
