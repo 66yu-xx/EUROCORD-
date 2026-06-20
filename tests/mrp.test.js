@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialData } from '../src/data.js';
-import { calculateMaterialRequirements, getInventoryStatus, getSummary } from '../src/mrp.js';
+import { calculateMaterialRequirements, getInventoryStatus, getInventoryStatusCounts, getSummary } from '../src/mrp.js';
 
 function calculateBoundaryResult(stockQty, safetyStock) {
   return calculateMaterialRequirements({
@@ -32,7 +32,9 @@ test('正确应用缺料和库存低规则', () => {
   assert.equal(results.find((x) => x.name === '电源板').status, '库存低');
   assert.equal(results.find((x) => x.name === '陶瓷片').status, '库存低');
   assert.equal(results.find((x) => x.name === '电源线').status, '充足');
+  assert.deepEqual(getInventoryStatusCounts(results), { shortageCount: 4, lowStockCount: 3, okCount: 3 });
   assert.deepEqual(getSummary(initialData), { productCount: 3, materialCount: 10, shortageCount: 4, lowStockCount: 3 });
+  assert.deepEqual(getSummary(initialData, results), { productCount: 3, materialCount: 10, shortageCount: 4, lowStockCount: 3 });
 });
 
 test('零订单不生成物料需求', () => {

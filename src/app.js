@@ -1,5 +1,5 @@
 import { initialData } from './data.js';
-import { calculateMaterialRequirements, getSummary } from './mrp.js';
+import { calculateMaterialRequirements, getInventoryStatusCounts, getSummary } from './mrp.js';
 import { loadData, resetStoredData, saveData } from './storage.js';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -26,14 +26,16 @@ const icon = (name, size = 19) => `<svg width="${size}" height="${size}" viewBox
 const materialName = (id) => data.materials.find((m) => m.id === id)?.name || '未知物料';
 const productName = (id) => data.products.find((p) => p.id === id)?.code || '未知产品';
 const format = (num) => Number(num).toLocaleString('zh-CN');
-const badge = (status) => `<span class="badge badge-${status === '缺料' ? 'danger' : status === '库存低' ? 'warning' : 'success'}"><i></i>${status}</span>`;
+const STATUS_TONES = { '缺料': 'danger', '库存低': 'warning', '充足': 'success' };
+const badge = (status) => `<span class="badge badge-${STATUS_TONES[status]}"><i></i>${status}</span>`;
 
-function appShell(content) {
+function appShell(content, results) {
   const active = pages.find((p) => p[0] === currentPage);
+  const statusCounts = getInventoryStatusCounts(results);
   return `<div class="shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">M</div><div><strong>MRP LITE</strong><small>物料需求计划</small></div></div>
-      <nav><p>工作台</p>${pages.map(([id, label, ico]) => `<button class="nav-item ${currentPage === id ? 'active' : ''}" data-page="${id}">${icon(ico)}<span>${label}</span>${id === 'analysis' && getSummary(data).shortageCount ? `<b>${getSummary(data).shortageCount}</b>` : ''}</button>`).join('')}</nav>
+      <nav><p>工作台</p>${pages.map(([id, label, ico]) => `<button class="nav-item ${currentPage === id ? 'active' : ''}" data-page="${id}">${icon(ico)}<span>${label}</span>${id === 'analysis' && statusCounts.shortageCount ? `<b>${statusCounts.shortageCount}</b>` : ''}</button>`).join('')}</nav>
       <div class="sidebar-footer"><div class="demo-dot"></div><div><strong>演示环境</strong><small>数据保存在此浏览器</small></div><button class="reset-button" data-action="reset-data" title="重置演示数据"><b>↺</b><span>重置演示数据</span></button></div>
     </aside>
     <main><header><div><small>MRP LITE V1 / ${active[1]}</small><h1>${active[1]}</h1></div><div class="header-actions"><span class="date">${new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date())}</span><button class="avatar">演</button></div></header><section class="content">${content}</section></main>
@@ -45,13 +47,12 @@ function statCard(label, value, hint, tone, ico) {
   return `<article class="stat-card"><div class="stat-icon ${tone}">${icon(ico, 22)}</div><div><span>${label}</span><strong>${value}</strong><small>${hint}</small></div></article>`;
 }
 
-function dashboard() {
-  const summary = getSummary(data);
-  const results = calculateMaterialRequirements(data);
+function dashboard(results) {
+  const summary = getSummary(data, results);
   const alerts = results.filter((r) => r.status !== '充足');
   return `<div class="hero"><div><span class="eyebrow">TODAY'S OVERVIEW</span><h2>早上好，生产计划一目了然。</h2><p>根据当前模拟订单与库存，系统已完成 BOM 展开和缺料计算。</p></div><button class="primary" data-page="orders">运行订单模拟 ${icon('chart', 17)}</button></div>
     <div class="stats-grid">${statCard('产品数量', summary.productCount, '已维护成品', 'blue', 'box')}${statCard('物料数量', summary.materialCount, '基础物料主数据', 'violet', 'layers')}${statCard('缺料物料', summary.shortageCount, summary.shortageCount ? '需要立即处理' : '当前无缺料', 'red', 'chart')}${statCard('库存低物料', summary.lowStockCount, '低于安全库存', 'amber', 'warehouse')}</div>
-    <div class="dashboard-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">需求风险</span><h3>物料预警</h3></div><button class="text-button" data-page="analysis">查看完整分析 →</button></div>${alerts.length ? `<div class="alert-list">${alerts.slice(0, 5).map((r) => `<div class="alert-row"><div class="material-avatar">${r.name[0]}</div><div class="grow"><strong>${r.name}</strong><small>${r.code} · 剩余 ${format(r.remainingQty)} ${r.unit}</small></div>${badge(r.status)}<div class="number"><small>缺口</small><strong>${format(r.shortageQty)}</strong></div></div>`).join('')}</div>` : empty('没有库存预警', '所有需求物料均处于安全库存之上。')}</article>
+    <div class="dashboard-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">需求风险</span><h3>物料预警</h3></div><button class="text-button" data-page="analysis">查看完整分析 →</button></div>${alerts.length ? `<div class="alert-list">${alerts.slice(0, 5).map((r) => { const isShortage = r.status === '缺料'; return `<div class="alert-row"><div class="material-avatar">${r.name[0]}</div><div class="grow"><strong>${r.name}</strong><small>${r.code} · 剩余 ${format(r.remainingQty)} ${r.unit}</small></div>${badge(r.status)}<div class="number ${isShortage ? 'danger' : 'warning'}"><small>${isShortage ? '缺口' : '剩余 / 安全'}</small><strong>${isShortage ? format(r.shortageQty) : `${format(r.remainingQty)} / ${format(r.safetyStock)}`}</strong></div></div>` }).join('')}</div>` : empty('没有库存预警', '所有需求物料均处于安全库存之上。')}</article>
     <article class="panel"><div class="panel-head"><div><span class="kicker">模拟订单</span><h3>当前生产组合</h3></div></div><div class="order-bars">${data.orders.map((o, i) => { const p = data.products.find((x) => x.id === o.productId); const max = Math.max(...data.orders.map((x) => x.orderQty), 1); return `<div class="bar-item"><div><strong>${p.code}</strong><span>${o.orderQty} 台</span></div><div class="bar-track"><i style="width:${o.orderQty / max * 100}%;--delay:${i * 80}ms"></i></div><small>${p.model}</small></div>` }).join('')}</div><div class="total-line"><span>模拟订单总量</span><strong>${format(data.orders.reduce((s, o) => s + Number(o.orderQty), 0))} <small>台</small></strong></div></article></div>`;
 }
 
@@ -82,18 +83,17 @@ function ordersPage() {
   return `<div class="split-layout"><div><div class="page-intro"><p>输入计划生产数量，系统将实时展开所有产品 BOM 并汇总物料需求。</p></div><article class="panel order-form"><div class="panel-head"><div><span class="kicker">ORDER SIMULATION</span><h3>本次模拟订单</h3></div><span class="draft">草稿</span></div><div class="order-lines">${data.products.map((p) => { const order = data.orders.find((o) => o.productId === p.id); return `<label class="order-line"><div class="product-badge">${p.code.slice(-1)}</div><div class="grow"><strong>${p.code}</strong><small>${p.name} · ${p.model}</small></div><div class="qty-control"><button type="button" data-step="-10" data-id="${p.id}">−</button><input type="number" min="0" step="1" value="${order?.orderQty || 0}" data-order="${p.id}"/><button type="button" data-step="10" data-id="${p.id}">＋</button></div><span>台</span></label>` }).join('')}</div><div class="order-footer"><div><span>订单合计</span><strong id="order-total">${format(total)} 台</strong></div><button class="primary large" data-action="analyze">开始缺料分析 ${icon('chart', 18)}</button></div></article></div><aside class="logic-card"><span class="kicker">CALCULATION LOGIC</span><h3>系统如何计算？</h3><div class="logic-step"><b>01</b><div><strong>读取订单数量</strong><p>汇总各产品计划生产台数</p></div></div><div class="logic-step"><b>02</b><div><strong>逐层展开 BOM</strong><p>订单数 × 每台物料用量</p></div></div><div class="logic-step"><b>03</b><div><strong>合并物料需求</strong><p>同一物料跨产品自动加总</p></div></div><div class="logic-step"><b>04</b><div><strong>库存与安全线判断</strong><p>生成充足、库存低、缺料状态</p></div></div><div class="formula">总需求 = Σ (订单数量 × 单台用量)</div></aside></div>`;
 }
 
-function analysisPage() {
-  const results = calculateMaterialRequirements(data);
-  const shortage = results.filter((r) => r.status === '缺料').length;
-  const low = results.filter((r) => r.status === '库存低').length;
-  return `<div class="analysis-banner"><div><span class="eyebrow">ANALYSIS COMPLETE</span><h2>缺料分析已完成</h2><p>基于 ${data.orders.filter((o) => o.orderQty > 0).length} 个产品、${format(data.orders.reduce((s,o) => s + Number(o.orderQty), 0))} 台订单的实时结果</p></div><div class="banner-metrics"><div><strong>${shortage}</strong><span>项缺料</span></div><div><strong>${low}</strong><span>项库存低</span></div></div></div><article class="panel table-panel"><div class="panel-head"><div><span class="kicker">MATERIAL REQUIREMENTS</span><h3>物料需求明细</h3></div><button class="secondary" data-page="orders">← 修改订单</button></div>${results.length ? `<div class="table-wrap"><table class="analysis-table"><thead><tr><th>物料</th><th>需求数量</th><th>当前库存</th><th>安全库存</th><th>预计剩余</th><th>缺口</th><th>状态</th></tr></thead><tbody>${results.map((r) => `<tr class="status-row-${r.status}"><td><div class="cell-main"><div class="material-avatar small">${r.name[0]}</div><div><strong>${r.name}</strong><small>${r.code}</small></div></div></td><td><strong>${format(r.requiredQty)}</strong> ${r.unit}</td><td>${format(r.stockQty)} ${r.unit}</td><td>${format(r.safetyStock)} ${r.unit}</td><td class="${r.remainingQty < 0 ? 'danger-text' : ''}">${format(r.remainingQty)} ${r.unit}</td><td><strong class="${r.shortageQty ? 'danger-text' : 'muted'}">${format(r.shortageQty)}</strong></td><td>${badge(r.status)}</td></tr>`).join('')}</tbody></table></div>` : empty('暂无需求结果', '请先在订单模拟中输入产品数量。')}</article><div class="rule-note"><strong>状态判断规则</strong><span><i class="dot red"></i>库存 &lt; 需求：缺料</span><span><i class="dot yellow"></i>库存 ≥ 需求，但剩余 &lt; 安全库存：库存低</span><span><i class="dot green"></i>其余：充足</span></div>`;
+function analysisPage(results) {
+  const { shortageCount: shortage, lowStockCount: low } = getInventoryStatusCounts(results);
+  return `<div class="analysis-banner"><div><span class="eyebrow">ANALYSIS COMPLETE</span><h2>缺料分析已完成</h2><p>基于 ${data.orders.filter((o) => o.orderQty > 0).length} 个产品、${format(data.orders.reduce((s,o) => s + Number(o.orderQty), 0))} 台订单的实时结果</p></div><div class="banner-metrics"><div><strong>${shortage}</strong><span>项缺料</span></div><div><strong>${low}</strong><span>项库存低</span></div></div></div><article class="panel table-panel"><div class="panel-head"><div><span class="kicker">MATERIAL REQUIREMENTS</span><h3>物料需求明细</h3></div><button class="secondary" data-page="orders">← 修改订单</button></div>${results.length ? `<div class="table-wrap"><table class="analysis-table"><thead><tr><th>物料</th><th>需求数量</th><th>当前库存</th><th>安全库存</th><th>预计剩余</th><th>缺口</th><th>状态</th></tr></thead><tbody>${results.map((r) => `<tr class="status-row-${r.status}"><td><div class="cell-main"><div class="material-avatar small">${r.name[0]}</div><div><strong>${r.name}</strong><small>${r.code}</small></div></div></td><td><strong>${format(r.requiredQty)}</strong> ${r.unit}</td><td>${format(r.stockQty)} ${r.unit}</td><td>${format(r.safetyStock)} ${r.unit}</td><td class="${r.status === '缺料' ? 'danger-text' : r.status === '库存低' ? 'warning-text' : ''}">${format(r.remainingQty)} ${r.unit}</td><td><strong class="${r.shortageQty ? 'danger-text' : 'muted'}">${format(r.shortageQty)}</strong></td><td>${badge(r.status)}</td></tr>`).join('')}</tbody></table></div>` : empty('暂无需求结果', '请先在订单模拟中输入产品数量。')}</article><div class="rule-note"><strong>状态判断规则</strong><span><i class="dot red"></i>库存 &lt; 需求：缺料</span><span><i class="dot yellow"></i>库存 ≥ 需求，但剩余 &lt; 安全库存：库存低</span><span><i class="dot green"></i>其余：充足</span></div>`;
 }
 
 function empty(title, desc) { return `<div class="empty"><div>✓</div><strong>${title}</strong><p>${desc}</p></div>`; }
 
 function render() {
   const renderers = { dashboard, products: productsPage, materials: materialsPage, bom: bomPage, inventory: inventoryPage, orders: ordersPage, analysis: analysisPage };
-  document.querySelector('#app').innerHTML = appShell(renderers[currentPage]());
+  const results = calculateMaterialRequirements(data);
+  document.querySelector('#app').innerHTML = appShell(renderers[currentPage](results), results);
   bindEvents();
 }
 

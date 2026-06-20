@@ -43,12 +43,20 @@ export function calculateMaterialRequirements({ products, materials, bom, invent
     .sort((a, b) => ({ '缺料': 0, '库存低': 1, '充足': 2 }[a.status] - { '缺料': 0, '库存低': 1, '充足': 2 }[b.status]));
 }
 
-export function getSummary(data) {
-  const results = calculateMaterialRequirements(data);
+export function getInventoryStatusCounts(results) {
+  return {
+    shortageCount: results.filter((item) => item.status === '缺料').length,
+    lowStockCount: results.filter((item) => item.status === '库存低').length,
+    okCount: results.filter((item) => item.status === '充足').length,
+  };
+}
+
+export function getSummary(data, results = calculateMaterialRequirements(data)) {
+  const statusCounts = getInventoryStatusCounts(results);
   return {
     productCount: data.products.length,
     materialCount: data.materials.length,
-    shortageCount: results.filter((item) => item.status === '缺料').length,
-    lowStockCount: results.filter((item) => item.status === '库存低').length,
+    shortageCount: statusCounts.shortageCount,
+    lowStockCount: statusCounts.lowStockCount,
   };
 }
