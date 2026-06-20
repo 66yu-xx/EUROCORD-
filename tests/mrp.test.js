@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialData } from '../src/data.js';
-import { calculateMaterialRequirements, getSummary } from '../src/mrp.js';
+import { calculateMaterialRequirements, getInventoryStatus, getSummary } from '../src/mrp.js';
 
 function calculateBoundaryResult(stockQty, safetyStock) {
   return calculateMaterialRequirements({
@@ -12,6 +12,13 @@ function calculateBoundaryResult(stockQty, safetyStock) {
     orders: [{ productId: 'p1', orderQty: 1 }],
   })[0];
 }
+
+test('库存状态引擎返回稳定的内部状态', () => {
+  assert.equal(getInventoryStatus(10, 9, 100), 'shortage');
+  assert.equal(getInventoryStatus(10, 10, 1), 'low');
+  assert.equal(getInventoryStatus(10, 14, 5), 'low');
+  assert.equal(getInventoryStatus(10, 15, 5), 'ok');
+});
 
 test('按多个产品订单正确汇总 BOM 需求', () => {
   const results = calculateMaterialRequirements(initialData);

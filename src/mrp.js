@@ -1,3 +1,15 @@
+const INVENTORY_STATUS_LABELS = {
+  shortage: '缺料',
+  low: '库存低',
+  ok: '充足',
+};
+
+export function getInventoryStatus(demandQty, stockQty, safetyStock) {
+  if (stockQty < demandQty) return 'shortage';
+  if (stockQty - demandQty < safetyStock) return 'low';
+  return 'ok';
+}
+
 export function calculateMaterialRequirements({ products, materials, bom, inventory, orders }) {
   const demand = new Map();
   const breakdown = new Map();
@@ -23,8 +35,9 @@ export function calculateMaterialRequirements({ products, materials, bom, invent
       const stockQty = Number(inventoryRow.stockQty) || 0;
       const safetyStock = Number(inventoryRow.safetyStock) || 0;
       const remainingQty = stockQty - requiredQty;
-      const shortageQty = Math.max(0, requiredQty - stockQty);
-      const status = stockQty < requiredQty ? '缺料' : remainingQty < safetyStock ? '库存低' : '充足';
+      const inventoryStatus = getInventoryStatus(requiredQty, stockQty, safetyStock);
+      const shortageQty = inventoryStatus === 'shortage' ? requiredQty - stockQty : 0;
+      const status = INVENTORY_STATUS_LABELS[inventoryStatus];
       return { ...material, requiredQty, stockQty, safetyStock, remainingQty, shortageQty, status, leadTimeDays: inventoryRow.leadTimeDays || 0, breakdown: breakdown.get(material.id) };
     })
     .sort((a, b) => ({ '缺料': 0, '库存低': 1, '充足': 2 }[a.status] - { '缺料': 0, '库存低': 1, '充足': 2 }[b.status]));
