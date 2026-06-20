@@ -2,6 +2,16 @@
 
 一个无登录、无数据库的前端 Demo，用于验证“订单 → BOM 展开 → 库存对比 → 缺料分析”的底层逻辑。
 
+## 继续项目前请先阅读
+
+以下文件是项目的唯一事实来源（Single Source of Truth）：
+
+- [PROJECT_RULES.md](./PROJECT_RULES.md)
+- [PROJECT_STATUS.md](./PROJECT_STATUS.md)
+- [ROADMAP.md](./ROADMAP.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [CHANGELOG.md](./CHANGELOG.md)
+
 ## 启动
 
 项目没有第三方运行依赖。在项目目录执行：
