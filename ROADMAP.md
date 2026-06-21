@@ -28,9 +28,11 @@
 
 建立老板视角的决策模型，作为后续采购周期、供应商管理和采购建议模块基础。
 
-## V3 — Lead Time
+## V3 — Decision Center
 
-引入采购周期。
+引入交付日期、物料 Lead Time、订单风险和销售机会可承诺性。
+
+Introduce delivery date, material lead time, order risk, and sales opportunity readiness.
 
 ## V4 — Alternate Materials
 

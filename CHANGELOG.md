@@ -31,3 +31,7 @@
 ## V2.3.1 — Product Philosophy Baseline
 
 引入订单驱动、Lead Time、老板决策模型、战略库存与客户保留库存理念。
+
+## V3 — Documentation Baseline
+
+确立 Decision Center 产品方向，将已接订单风险和未接订单可承诺性定义为 V3 两大场景，并将 Lead Time 重新定位为决策输入，而不是孤立的采购功能。

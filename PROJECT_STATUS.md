@@ -26,11 +26,11 @@ Active Development
 
 ## Current Focus
 
-V2.3.1 Product Philosophy
+V3 Decision Center
 
 ## Next Phase
 
-V3 Procurement Cycle
+V3 Decision Center / Lead Time
 
 ## 后续路线
 
