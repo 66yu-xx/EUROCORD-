@@ -39,3 +39,13 @@
 ## V3 — Visible Editable Decision Loop
 
 将 Decision Engine 接入 Dashboard 与缺料分析：Dashboard 增加高风险、需要行动、正常汇总；缺料分析增加最早交期、剩余天数、采购周期、决策风险和行动建议。订单交付日期 `order.deliveryDate` 与物料采购周期 `material.leadTimeDays` 现可编辑并持久化。Demo 数据已校准为同时展示 `OK`、`Action Required`、`High Risk`，重置演示数据会重新加载最新 Demo 基线。
+
+## V3 — Decision UI Refinement
+
+Commit：`c21a3cbc1c7a48ac1c77dcc0331be114fdcbad26`
+
+- Refined Dashboard decision cards for `High Risk`、`Action Required` and `OK`。
+- Refined Shortage Analysis information hierarchy around risk、reason and action。
+- Refined business action wording for direct decision use。
+- No calculation logic changed。
+- Tests：39/39 passed。

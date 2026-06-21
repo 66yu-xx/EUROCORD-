@@ -43,6 +43,8 @@ delivery date + lead time + shortage
 
 当前继续进行 V3 决策界面整理与 Decision Center 准备，不进入 V4。
 
+V3 Decision UI refinement completed：Dashboard 决策风险卡与缺料分析信息层级已完成整理。当前仍处于 Decision Center preparation 阶段，不进入 V4。
+
 ## V4 — Alternate Materials
 
 支持替代料关系。

@@ -166,6 +166,21 @@ order.deliveryDate
 - `order.deliveryDate`
 - `material.leadTimeDays`
 
+决策 UI 已围绕以下业务阅读顺序重新组织：
+
+```text
+风险
+→ 原因
+→ 行动建议
+```
+
+本次 Decision UI refinement 仅优化决策表达和信息层级，没有改变：
+
+- Decision Engine 决策计算逻辑
+- MRP 汇总逻辑
+- 安全库存判断逻辑
+- 现有数据结构
+
 当前实现范围仅限物料级风险，不包括：
 
 - 订单级库存分配

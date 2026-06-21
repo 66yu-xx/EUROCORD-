@@ -37,9 +37,14 @@ V3 首个可见、可编辑的物料级决策闭环已完成：
 = 决策风险 / 行动建议
 ```
 
+V3 Decision UI refinement 已完成：
+
+- Dashboard 已优化为高风险、需要行动、正常三张决策风险卡。
+- 缺料分析已按“风险 → 缺口 → 时间原因 → 行动建议 → 库存明细”重新组织信息层级。
+
 ## Next Phase
 
-V3 Decision UI refinement / Decision Center preparation
+V3 Decision Center preparation
 
 下一阶段继续完善 V3，不进入 V4。
 
