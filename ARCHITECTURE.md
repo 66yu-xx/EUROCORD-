@@ -150,6 +150,29 @@ Product
 - `order.deliveryDate`
 - `material.leadTimeDays`
 
+## V3 当前实现
+
+首个已实现的 V3 闭环是物料级决策风险：
+
+```text
+order.deliveryDate
++ material.leadTimeDays
++ shortageQty
+→ riskLevel / actionSuggestion
+```
+
+当前可编辑的决策输入：
+
+- `order.deliveryDate`
+- `material.leadTimeDays`
+
+当前实现范围仅限物料级风险，不包括：
+
+- 订单级库存分配
+- 供应商选择
+- 替代料推荐
+- 采购订单生成
+
 ## V3 范围边界
 
 V3 将 Lead Time 作为决策输入，而不是独立的采购功能。以下能力属于后续阶段，不在 V3 实现范围内：

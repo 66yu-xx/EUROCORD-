@@ -35,3 +35,7 @@
 ## V3 — Documentation Baseline
 
 确立 Decision Center 产品方向，将已接订单风险和未接订单可承诺性定义为 V3 两大场景，并将 Lead Time 重新定位为决策输入，而不是孤立的采购功能。
+
+## V3 — Visible Editable Decision Loop
+
+将 Decision Engine 接入 Dashboard 与缺料分析：Dashboard 增加高风险、需要行动、正常汇总；缺料分析增加最早交期、剩余天数、采购周期、决策风险和行动建议。订单交付日期 `order.deliveryDate` 与物料采购周期 `material.leadTimeDays` 现可编辑并持久化。Demo 数据已校准为同时展示 `OK`、`Action Required`、`High Risk`，重置演示数据会重新加载最新 Demo 基线。

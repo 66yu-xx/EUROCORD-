@@ -34,6 +34,15 @@
 
 Introduce delivery date, material lead time, order risk, and sales opportunity readiness.
 
+首个决策闭环已完成：
+
+```text
+delivery date + lead time + shortage
+→ risk level / action suggestion
+```
+
+当前继续进行 V3 决策界面整理与 Decision Center 准备，不进入 V4。
+
 ## V4 — Alternate Materials
 
 支持替代料关系。

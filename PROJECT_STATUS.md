@@ -28,9 +28,20 @@ Active Development
 
 V3 Decision Center
 
+V3 首个可见、可编辑的物料级决策闭环已完成：
+
+```text
+订单交付日期
++ 物料采购周期
++ 缺料数量
+= 决策风险 / 行动建议
+```
+
 ## Next Phase
 
-V3 Decision Center / Lead Time
+V3 Decision UI refinement / Decision Center preparation
+
+下一阶段继续完善 V3，不进入 V4。
 
 ## 后续路线
 
