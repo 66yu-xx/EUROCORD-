@@ -1,4 +1,5 @@
 import { DEFAULT_DELIVERY_DATE, DEFAULT_LEAD_TIME_DAYS, initialData } from './data.js';
+import { calculateDecisionResults } from './decision.js';
 import { calculateMaterialRequirements, getInventoryStatusCounts, getSummary } from './mrp.js';
 import { loadData, resetStoredData, saveData } from './storage.js';
 
@@ -28,6 +29,14 @@ const productName = (id) => data.products.find((p) => p.id === id)?.code || '未
 const format = (num) => Number(num).toLocaleString('zh-CN');
 const STATUS_TONES = { '缺料': 'danger', '库存低': 'warning', '充足': 'success' };
 const badge = (status) => `<span class="badge badge-${STATUS_TONES[status]}"><i></i>${status}</span>`;
+const RISK_LABELS = { OK: '正常', 'Action Required': '需要行动', 'High Risk': '高风险' };
+const RISK_TONES = { OK: 'success', 'Action Required': 'warning', 'High Risk': 'danger' };
+const ACTION_LABELS = {
+  no_action_required: '暂无额外行动',
+  purchase_action_required: '需要尽快采购或确认供应',
+  delivery_risk_action_required: '存在交付风险，建议调整交期、数量或寻找替代方案',
+};
+const decisionBadge = (riskLevel) => `<span class="badge badge-${RISK_TONES[riskLevel]}"><i></i>${RISK_LABELS[riskLevel]}</span>`;
 
 function appShell(content, results) {
   const active = pages.find((p) => p[0] === currentPage);
@@ -85,7 +94,8 @@ function ordersPage() {
 
 function analysisPage(results) {
   const { shortageCount: shortage, lowStockCount: low } = getInventoryStatusCounts(results);
-  return `<div class="analysis-banner"><div><span class="eyebrow">ANALYSIS COMPLETE</span><h2>缺料分析已完成</h2><p>基于 ${data.orders.filter((o) => o.orderQty > 0).length} 个产品、${format(data.orders.reduce((s,o) => s + Number(o.orderQty), 0))} 台订单的实时结果</p></div><div class="banner-metrics"><div><strong>${shortage}</strong><span>项缺料</span></div><div><strong>${low}</strong><span>项库存低</span></div></div></div><article class="panel table-panel"><div class="panel-head"><div><span class="kicker">MATERIAL REQUIREMENTS</span><h3>物料需求明细</h3></div><button class="secondary" data-page="orders">← 修改订单</button></div>${results.length ? `<div class="table-wrap"><table class="analysis-table"><thead><tr><th>物料</th><th>需求数量</th><th>当前库存</th><th>安全库存</th><th>预计剩余</th><th>缺口</th><th>状态</th></tr></thead><tbody>${results.map((r) => `<tr class="status-row-${r.status}"><td><div class="cell-main"><div class="material-avatar small">${r.name[0]}</div><div><strong>${r.name}</strong><small>${r.code}</small></div></div></td><td><strong>${format(r.requiredQty)}</strong> ${r.unit}</td><td>${format(r.stockQty)} ${r.unit}</td><td>${format(r.safetyStock)} ${r.unit}</td><td class="${r.status === '缺料' ? 'danger-text' : r.status === '库存低' ? 'warning-text' : ''}">${format(r.remainingQty)} ${r.unit}</td><td><strong class="${r.shortageQty ? 'danger-text' : 'muted'}">${format(r.shortageQty)}</strong></td><td>${badge(r.status)}</td></tr>`).join('')}</tbody></table></div>` : empty('暂无需求结果', '请先在订单模拟中输入产品数量。')}</article><div class="rule-note"><strong>状态判断规则</strong><span><i class="dot red"></i>库存 &lt; 需求：缺料</span><span><i class="dot yellow"></i>库存 ≥ 需求，但剩余 &lt; 安全库存：库存低</span><span><i class="dot green"></i>其余：充足</span></div>`;
+  const decisionResults = calculateDecisionResults(results, { materials: data.materials, today: new Date() });
+  return `<div class="analysis-banner"><div><span class="eyebrow">ANALYSIS COMPLETE</span><h2>缺料分析已完成</h2><p>基于 ${data.orders.filter((o) => o.orderQty > 0).length} 个产品、${format(data.orders.reduce((s,o) => s + Number(o.orderQty), 0))} 台订单的实时结果</p></div><div class="banner-metrics"><div><strong>${shortage}</strong><span>项缺料</span></div><div><strong>${low}</strong><span>项库存低</span></div></div></div><article class="panel table-panel"><div class="panel-head"><div><span class="kicker">MATERIAL REQUIREMENTS</span><h3>物料需求明细</h3></div><button class="secondary" data-page="orders">← 修改订单</button></div>${decisionResults.length ? `<div class="table-wrap"><table class="analysis-table"><thead><tr><th>物料</th><th>需求数量</th><th>当前库存</th><th>安全库存</th><th>预计剩余</th><th>缺口</th><th>状态</th><th>最早交期</th><th>剩余天数</th><th>采购周期</th><th>决策风险</th><th>行动建议</th></tr></thead><tbody>${decisionResults.map((r) => `<tr class="status-row-${r.status}"><td><div class="cell-main"><div class="material-avatar small">${r.name[0]}</div><div><strong>${r.name}</strong><small>${r.code}</small></div></div></td><td><strong>${format(r.requiredQty)}</strong> ${r.unit}</td><td>${format(r.stockQty)} ${r.unit}</td><td>${format(r.safetyStock)} ${r.unit}</td><td class="${r.status === '缺料' ? 'danger-text' : r.status === '库存低' ? 'warning-text' : ''}">${format(r.remainingQty)} ${r.unit}</td><td><strong class="${r.shortageQty ? 'danger-text' : 'muted'}">${format(r.shortageQty)}</strong></td><td>${badge(r.status)}</td><td>${r.earliestDeliveryDate || '—'}</td><td>${format(r.remainingDays)} 天</td><td>${format(r.leadTimeDays)} 天</td><td>${decisionBadge(r.riskLevel)}</td><td>${ACTION_LABELS[r.actionSuggestion]}</td></tr>`).join('')}</tbody></table></div>` : empty('暂无需求结果', '请先在订单模拟中输入产品数量。')}</article><div class="rule-note"><strong>状态判断规则</strong><span><i class="dot red"></i>库存 &lt; 需求：缺料</span><span><i class="dot yellow"></i>库存 ≥ 需求，但剩余 &lt; 安全库存：库存低</span><span><i class="dot green"></i>其余：充足</span></div>`;
 }
 
 function empty(title, desc) { return `<div class="empty"><div>✓</div><strong>${title}</strong><p>${desc}</p></div>`; }
