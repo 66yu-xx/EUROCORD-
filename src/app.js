@@ -81,7 +81,7 @@ function productsPage() {
 }
 
 function materialsPage() {
-  return tablePage({ description: '统一管理 BOM、库存和缺料分析共用的物料主数据。', action: `<button class="primary" data-action="add-material">${icon('plus', 17)} 新增物料</button>`, columns: ['物料编码', '物料名称', '分类', '单位', '引用 BOM', '操作'], rows: data.materials.map((m) => `<tr><td><strong class="code">${m.code}</strong></td><td>${m.name}</td><td><span class="soft-tag">${m.category}</span></td><td>${m.unit}</td><td>${data.bom.filter((b) => b.materialId === m.id).length} 个产品</td><td><button class="icon-btn" data-action="edit-material" data-id="${m.id}">${icon('edit', 16)}</button></td></tr>`) });
+  return tablePage({ description: '统一管理 BOM、库存和缺料分析共用的物料主数据。', action: `<button class="primary" data-action="add-material">${icon('plus', 17)} 新增物料</button>`, columns: ['物料编码', '物料名称', '分类', '单位', '采购周期', '引用 BOM', '操作'], rows: data.materials.map((m) => `<tr><td><strong class="code">${m.code}</strong></td><td>${m.name}</td><td><span class="soft-tag">${m.category}</span></td><td>${m.unit}</td><td>${format(m.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS)} 天</td><td>${data.bom.filter((b) => b.materialId === m.id).length} 个产品</td><td><button class="icon-btn" data-action="edit-material" data-id="${m.id}">${icon('edit', 16)}</button></td></tr>`) });
 }
 
 function bomPage() {
@@ -96,7 +96,7 @@ function inventoryPage() {
 
 function ordersPage() {
   const total = data.orders.reduce((s, o) => s + Number(o.orderQty || 0), 0);
-  return `<div class="split-layout"><div><div class="page-intro"><p>输入计划生产数量，系统将实时展开所有产品 BOM 并汇总物料需求。</p></div><article class="panel order-form"><div class="panel-head"><div><span class="kicker">ORDER SIMULATION</span><h3>本次模拟订单</h3></div><span class="draft">草稿</span></div><div class="order-lines">${data.products.map((p) => { const order = data.orders.find((o) => o.productId === p.id); return `<label class="order-line"><div class="product-badge">${p.code.slice(-1)}</div><div class="grow"><strong>${p.code}</strong><small>${p.name} · ${p.model}</small></div><div class="qty-control"><button type="button" data-step="-10" data-id="${p.id}">−</button><input type="number" min="0" step="1" value="${order?.orderQty || 0}" data-order="${p.id}"/><button type="button" data-step="10" data-id="${p.id}">＋</button></div><span>台</span></label>` }).join('')}</div><div class="order-footer"><div><span>订单合计</span><strong id="order-total">${format(total)} 台</strong></div><button class="primary large" data-action="analyze">开始缺料分析 ${icon('chart', 18)}</button></div></article></div><aside class="logic-card"><span class="kicker">CALCULATION LOGIC</span><h3>系统如何计算？</h3><div class="logic-step"><b>01</b><div><strong>读取订单数量</strong><p>汇总各产品计划生产台数</p></div></div><div class="logic-step"><b>02</b><div><strong>逐层展开 BOM</strong><p>订单数 × 每台物料用量</p></div></div><div class="logic-step"><b>03</b><div><strong>合并物料需求</strong><p>同一物料跨产品自动加总</p></div></div><div class="logic-step"><b>04</b><div><strong>库存与安全线判断</strong><p>生成充足、库存低、缺料状态</p></div></div><div class="formula">总需求 = Σ (订单数量 × 单台用量)</div></aside></div>`;
+  return `<div class="split-layout"><div><div class="page-intro"><p>输入计划生产数量和交付日期，系统将实时展开所有产品 BOM 并汇总物料需求。</p></div><article class="panel order-form"><div class="panel-head"><div><span class="kicker">ORDER SIMULATION</span><h3>本次模拟订单</h3></div><span class="draft">草稿</span></div><div class="order-lines">${data.products.map((p) => { const order = data.orders.find((o) => o.productId === p.id); return `<label class="order-line"><div class="product-badge">${p.code.slice(-1)}</div><div class="grow"><strong>${p.code}</strong><small>${p.name} · ${p.model}</small></div><div class="order-date"><small>交付日期</small><input type="date" value="${order?.deliveryDate || DEFAULT_DELIVERY_DATE}" data-delivery-date="${p.id}" aria-label="${p.code} 交付日期" /></div><div class="qty-control"><button type="button" data-step="-10" data-id="${p.id}">−</button><input type="number" min="0" step="1" value="${order?.orderQty || 0}" data-order="${p.id}"/><button type="button" data-step="10" data-id="${p.id}">＋</button></div><span>台</span></label>` }).join('')}</div><div class="order-footer"><div><span>订单合计</span><strong id="order-total">${format(total)} 台</strong></div><button class="primary large" data-action="analyze">开始缺料分析 ${icon('chart', 18)}</button></div></article></div><aside class="logic-card"><span class="kicker">CALCULATION LOGIC</span><h3>系统如何计算？</h3><div class="logic-step"><b>01</b><div><strong>读取订单数量</strong><p>汇总各产品计划生产台数</p></div></div><div class="logic-step"><b>02</b><div><strong>逐层展开 BOM</strong><p>订单数 × 每台物料用量</p></div></div><div class="logic-step"><b>03</b><div><strong>合并物料需求</strong><p>同一物料跨产品自动加总</p></div></div><div class="logic-step"><b>04</b><div><strong>库存与安全线判断</strong><p>生成充足、库存低、缺料状态</p></div></div><div class="formula">总需求 = Σ (订单数量 × 单台用量)</div></aside></div>`;
 }
 
 function analysisPage(results) {
@@ -120,6 +120,7 @@ function bindEvents() {
   document.querySelectorAll('[data-page]').forEach((el) => el.addEventListener('click', () => navigate(el.dataset.page)));
   document.querySelectorAll('[data-product-tab]').forEach((el) => el.addEventListener('click', () => { sessionStorage.setItem('selectedProduct', el.dataset.productTab); render(); }));
   document.querySelectorAll('[data-order]').forEach((input) => input.addEventListener('input', () => updateOrder(input.dataset.order, input.value)));
+  document.querySelectorAll('[data-delivery-date]').forEach((input) => input.addEventListener('change', () => updateOrderDeliveryDate(input.dataset.deliveryDate, input.value)));
   document.querySelectorAll('[data-step]').forEach((btn) => btn.addEventListener('click', () => { const input = document.querySelector(`[data-order="${btn.dataset.id}"]`); input.value = Math.max(0, Number(input.value) + Number(btn.dataset.step)); updateOrder(btn.dataset.id, input.value); }));
   document.querySelectorAll('[data-action]').forEach((el) => el.addEventListener('click', () => handleAction(el.dataset.action, el.dataset)));
   document.querySelector('[data-table-search]')?.addEventListener('input', (e) => { document.querySelectorAll('tbody tr').forEach((row) => row.hidden = !row.textContent.toLowerCase().includes(e.target.value.toLowerCase())); });
@@ -132,6 +133,14 @@ function updateOrder(productId, qty) {
   saveData(data);
   const total = data.orders.reduce((s, o) => s + Number(o.orderQty), 0);
   const totalEl = document.querySelector('#order-total'); if (totalEl) totalEl.textContent = `${format(total)} 台`;
+}
+
+function updateOrderDeliveryDate(productId, deliveryDate) {
+  let order = data.orders.find((o) => o.productId === productId);
+  if (!order) { order = { productId, orderQty: 0, deliveryDate: DEFAULT_DELIVERY_DATE }; data.orders.push(order); }
+  order.deliveryDate = deliveryDate || DEFAULT_DELIVERY_DATE;
+  saveData(data);
+  render();
 }
 
 function handleAction(action, dataset) {
@@ -165,7 +174,20 @@ function productModal(id) {
 }
 function materialModal(id) {
   const item = data.materials.find((m) => m.id === id);
-  showModal(item ? '编辑物料' : '新增物料', `${field('物料编码', 'code', item?.code)}${field('物料名称', 'name', item?.name)}${field('分类', 'category', item?.category)}${field('单位', 'unit', item?.unit)}`, (fd) => { const value = Object.fromEntries(fd); if (item) Object.assign(item, value); else { const newItem = { id: `m${Date.now()}`, ...value, leadTimeDays: DEFAULT_LEAD_TIME_DAYS }; data.materials.push(newItem); data.inventory.push({ materialId: newItem.id, stockQty: 0, safetyStock: 0, leadTimeDays: DEFAULT_LEAD_TIME_DAYS }); } });
+  const inventoryItem = data.inventory.find((inventory) => inventory.materialId === id);
+  const leadTimeDays = item?.leadTimeDays ?? inventoryItem?.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS;
+  showModal(item ? '编辑物料' : '新增物料', `${field('物料编码', 'code', item?.code)}${field('物料名称', 'name', item?.name)}${field('分类', 'category', item?.category)}${field('单位', 'unit', item?.unit)}${field('采购周期（天）', 'leadTimeDays', leadTimeDays, 'number', 'min="0" step="1"')}`, (fd) => {
+    const value = Object.fromEntries(fd);
+    value.leadTimeDays = Math.max(0, Number(value.leadTimeDays) || 0);
+    if (item) {
+      Object.assign(item, value);
+      if (inventoryItem) inventoryItem.leadTimeDays = value.leadTimeDays;
+    } else {
+      const newItem = { id: `m${Date.now()}`, ...value };
+      data.materials.push(newItem);
+      data.inventory.push({ materialId: newItem.id, stockQty: 0, safetyStock: 0, leadTimeDays: value.leadTimeDays });
+    }
+  });
 }
 function inventoryModal(id) {
   const m = data.materials.find((x) => x.id === id); let inv = data.inventory.find((x) => x.materialId === id);
