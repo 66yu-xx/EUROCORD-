@@ -6,6 +6,7 @@ import { loadData, resetStoredData, saveData } from './storage.js';
 const clone = (value) => JSON.parse(JSON.stringify(value));
 let data = loadData(initialData);
 let currentPage = 'dashboard';
+let analysisRiskFilter = 'ALL';
 let toastTimer;
 
 const pages = [
@@ -31,6 +32,7 @@ const STATUS_TONES = { '缺料': 'danger', '库存低': 'warning', '充足': 'su
 const badge = (status) => `<span class="badge badge-${STATUS_TONES[status]}"><i></i>${status}</span>`;
 const RISK_LABELS = { OK: '正常', 'Action Required': '需要行动', 'High Risk': '高风险' };
 const RISK_TONES = { OK: 'success', 'Action Required': 'warning', 'High Risk': 'danger' };
+const RISK_PRIORITY = { 'High Risk': 0, 'Action Required': 1, OK: 2 };
 const ACTION_LABELS = {
   no_action_required: '当前可按计划推进',
   purchase_action_required: '今天确认采购安排，锁定到料时间',
@@ -41,6 +43,15 @@ const getDecisionRiskCounts = (results) => ({
   high: results.filter((result) => result.riskLevel === 'High Risk').length,
   action: results.filter((result) => result.riskLevel === 'Action Required').length,
   ok: results.filter((result) => result.riskLevel === 'OK').length,
+});
+const sortDecisionResults = (results) => [...results].sort((a, b) => {
+  const riskOrder = RISK_PRIORITY[a.riskLevel] - RISK_PRIORITY[b.riskLevel];
+  if (riskOrder) return riskOrder;
+  const remainingDaysOrder = a.remainingDays - b.remainingDays;
+  if (remainingDaysOrder) return remainingDaysOrder;
+  const purchaseWindowOrder = (a.remainingDays - a.leadTimeDays) - (b.remainingDays - b.leadTimeDays);
+  if (purchaseWindowOrder) return purchaseWindowOrder;
+  return b.shortageQty - a.shortageQty;
 });
 
 function appShell(content, results) {
@@ -70,7 +81,7 @@ function dashboard(results) {
     <div class="stats-grid">${statCard('产品数量', summary.productCount, '已维护成品', 'blue', 'box')}${statCard('物料数量', summary.materialCount, '基础物料主数据', 'violet', 'layers')}${statCard('缺料物料', summary.shortageCount, summary.shortageCount ? '需要立即处理' : '当前无缺料', 'red', 'chart')}${statCard('库存低物料', summary.lowStockCount, '低于安全库存', 'amber', 'warehouse')}</div>
     <div class="dashboard-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">需求风险</span><h3>物料预警</h3></div><button class="text-button" data-page="analysis">查看完整分析 →</button></div>${alerts.length ? `<div class="alert-list">${alerts.slice(0, 5).map((r) => { const isShortage = r.status === '缺料'; return `<div class="alert-row"><div class="material-avatar">${r.name[0]}</div><div class="grow"><strong>${r.name}</strong><small>${r.code} · 剩余 ${format(r.remainingQty)} ${r.unit}</small></div>${badge(r.status)}<div class="number ${isShortage ? 'danger' : 'warning'}"><small>${isShortage ? '缺口' : '剩余 / 安全'}</small><strong>${isShortage ? format(r.shortageQty) : `${format(r.remainingQty)} / ${format(r.safetyStock)}`}</strong></div></div>` }).join('')}</div>` : empty('没有库存预警', '所有需求物料均处于安全库存之上。')}</article>
     <article class="panel"><div class="panel-head"><div><span class="kicker">模拟订单</span><h3>当前生产组合</h3></div></div><div class="order-bars">${data.orders.map((o, i) => { const p = data.products.find((x) => x.id === o.productId); const max = Math.max(...data.orders.map((x) => x.orderQty), 1); return `<div class="bar-item"><div><strong>${p.code}</strong><span>${o.orderQty} 台</span></div><div class="bar-track"><i style="width:${o.orderQty / max * 100}%;--delay:${i * 80}ms"></i></div><small>${p.model}</small></div>` }).join('')}</div><div class="total-line"><span>模拟订单总量</span><strong>${format(data.orders.reduce((s, o) => s + Number(o.orderQty), 0))} <small>台</small></strong></div></article></div>
-    <article class="decision-overview panel"><div class="panel-head"><div><span class="kicker">DECISION PRIORITY</span><h3>今天先处理什么？</h3><p>基于缺料、最早交期和采购周期，按交付风险排出处理优先级。</p></div><button class="text-button" data-page="analysis">查看决策明细 →</button></div><div class="risk-summary-grid"><button class="risk-summary-card danger" data-page="analysis"><span>高风险</span><strong>${riskCounts.high}<small> 项</small></strong><p>交付窗口不足，需立即协调交期或数量</p><b>优先处理 →</b></button><button class="risk-summary-card warning" data-page="analysis"><span>需要行动</span><strong>${riskCounts.action}<small> 项</small></strong><p>仍有采购窗口，今天确认采购安排</p><b>确认安排 →</b></button><button class="risk-summary-card success" data-page="analysis"><span>正常</span><strong>${riskCounts.ok}<small> 项</small></strong><p>当前库存可覆盖需求，可按计划推进</p><b>查看明细 →</b></button></div></article>`;
+    <article class="decision-overview panel"><div class="panel-head"><div><span class="kicker">DECISION PRIORITY</span><h3>今天先处理什么？</h3><p>基于缺料、最早交期和采购周期，按交付风险排出处理优先级。</p></div><button class="text-button" data-page="analysis">查看决策明细 →</button></div><div class="risk-summary-grid"><button class="risk-summary-card danger" data-page="analysis" data-risk-filter="High Risk"><span>高风险</span><strong>${riskCounts.high}<small> 项</small></strong><p>交付窗口不足，需立即协调交期或数量</p><b>优先处理 →</b></button><button class="risk-summary-card warning" data-page="analysis" data-risk-filter="Action Required"><span>需要行动</span><strong>${riskCounts.action}<small> 项</small></strong><p>仍有采购窗口，今天确认采购安排</p><b>确认安排 →</b></button><button class="risk-summary-card success" data-page="analysis" data-risk-filter="OK"><span>正常</span><strong>${riskCounts.ok}<small> 项</small></strong><p>当前库存可覆盖需求，可按计划推进</p><b>查看明细 →</b></button></div></article>`;
 }
 
 function tablePage({ title, description, action, columns, rows }) {
@@ -102,9 +113,25 @@ function ordersPage() {
 
 function analysisPage(results) {
   const { shortageCount: shortage, lowStockCount: low } = getInventoryStatusCounts(results);
-  const decisionResults = calculateDecisionResults(results, { materials: data.materials, today: new Date() });
+  const decisionResults = sortDecisionResults(calculateDecisionResults(results, { materials: data.materials, today: new Date() }));
   const riskCounts = getDecisionRiskCounts(decisionResults);
-  return `<div class="analysis-banner"><div><span class="eyebrow">DECISION VIEW</span><h2>交付风险决策清单</h2><p>先看风险，再看时间原因和今天需要采取的行动。当前 ${shortage} 项缺料、${low} 项库存低。</p></div><div class="banner-metrics decision-metrics"><div class="danger"><strong>${riskCounts.high}</strong><span>高风险</span></div><div class="warning"><strong>${riskCounts.action}</strong><span>需要行动</span></div><div class="success"><strong>${riskCounts.ok}</strong><span>正常</span></div></div></div><article class="panel table-panel"><div class="panel-head decision-table-head"><div><span class="kicker">DECISION PRIORITY</span><h3>物料决策明细</h3><p>从左到右依次回答：哪个物料有风险、为什么、现在做什么。</p></div><button class="secondary" data-page="orders">← 修改订单</button></div>${decisionResults.length ? `<div class="table-wrap"><table class="analysis-table decision-table"><thead><tr><th>物料</th><th>决策风险</th><th>缺料数量</th><th>时间判断依据</th><th>现在应该做什么</th><th>库存状态</th><th>需求 / 库存</th><th>安全库存</th><th>预计剩余</th></tr></thead><tbody>${decisionResults.map((r) => { const gap = r.leadTimeDays - r.remainingDays; const reason = r.riskLevel === 'High Risk' ? `采购周期超出交付窗口 ${format(gap)} 天` : r.riskLevel === 'Action Required' ? (gap === 0 ? '采购周期刚好覆盖交付窗口，没有时间缓冲' : `采购窗口尚有 ${format(-gap)} 天缓冲`) : '当前无缺料，交付风险可控'; return `<tr class="decision-row risk-${RISK_TONES[r.riskLevel]}"><td><div class="cell-main"><div class="material-avatar small">${r.name[0]}</div><div><strong>${r.name}</strong><small>${r.code}</small></div></div></td><td class="decision-risk-cell">${decisionBadge(r.riskLevel)}</td><td><strong class="shortage-number ${r.shortageQty ? 'danger-text' : 'muted'}">${format(r.shortageQty)}</strong><small>${r.unit}</small></td><td><div class="decision-evidence"><span>最早交期 <strong>${r.earliestDeliveryDate || '—'}</strong></span><span>剩余天数 <strong>${format(r.remainingDays)} 天</strong></span><span>采购周期 <strong>${format(r.leadTimeDays)} 天</strong></span><small>${reason}</small></div></td><td class="action-cell"><strong>${ACTION_LABELS[r.actionSuggestion]}</strong></td><td>${badge(r.status)}</td><td><strong>${format(r.requiredQty)}</strong> / ${format(r.stockQty)} ${r.unit}</td><td>${format(r.safetyStock)} ${r.unit}</td><td class="${r.status === '缺料' ? 'danger-text' : r.status === '库存低' ? 'warning-text' : ''}">${format(r.remainingQty)} ${r.unit}</td></tr>` }).join('')}</tbody></table></div>` : empty('暂无需求结果', '请先在订单模拟中输入产品数量。')}</article><div class="rule-note"><strong>库存状态规则</strong><span><i class="dot red"></i>库存 &lt; 需求：缺料</span><span><i class="dot yellow"></i>库存 ≥ 需求，但剩余 &lt; 安全库存：库存低</span><span><i class="dot green"></i>其余：充足</span></div>`;
+  const visibleResults = analysisRiskFilter === 'ALL' ? decisionResults : decisionResults.filter((result) => result.riskLevel === analysisRiskFilter);
+  const filterOptions = [
+    ['ALL', '查看全部', decisionResults.length],
+    ['High Risk', '高风险', riskCounts.high],
+    ['Action Required', '需要行动', riskCounts.action],
+    ['OK', '正常', riskCounts.ok],
+  ];
+  const rows = visibleResults.map((r) => {
+    const gap = r.leadTimeDays - r.remainingDays;
+    const reason = r.riskLevel === 'High Risk' ? `采购周期超出交付窗口 ${format(gap)} 天` : r.riskLevel === 'Action Required' ? (gap === 0 ? '采购周期刚好覆盖交付窗口，没有时间缓冲' : `采购窗口尚有 ${format(-gap)} 天缓冲`) : '当前无缺料，交付风险可控';
+    const affectedOrders = (r.breakdown || []).map((item) => {
+      const product = data.products.find((candidate) => candidate.code === item.productCode);
+      return `<div class="affected-order"><div><strong>${item.productCode}</strong><small>${product?.name || '产品'}</small></div><span><b>${format(item.orderQty)}</b> 台</span><span><small>交付日期</small><b>${item.deliveryDate || '—'}</b></span></div>`;
+    }).join('');
+    return `<tr class="decision-row risk-${RISK_TONES[r.riskLevel]}"><td><div class="cell-main"><div class="material-avatar small">${r.name[0]}</div><div><strong>${r.name}</strong><small>${r.code}</small></div></div></td><td class="decision-risk-cell">${decisionBadge(r.riskLevel)}</td><td><strong class="shortage-number ${r.shortageQty ? 'danger-text' : 'muted'}">${format(r.shortageQty)}</strong><small>${r.unit}</small></td><td><div class="decision-evidence"><span>最早交期 <strong>${r.earliestDeliveryDate || '—'}</strong></span><span>剩余天数 <strong>${format(r.remainingDays)} 天</strong></span><span>采购周期 <strong>${format(r.leadTimeDays)} 天</strong></span><small>${reason}</small></div></td><td class="action-cell"><strong>${ACTION_LABELS[r.actionSuggestion]}</strong></td><td><details class="affected-orders"><summary>受影响订单 <b>${r.breakdown?.length || 0}</b></summary><div class="affected-orders-list">${affectedOrders || '<span class="muted">暂无订单明细</span>'}</div><p>仅表示这些订单使用了该物料，不代表具体订单一定延期；当前未进行订单级库存分配。</p></details></td><td>${badge(r.status)}</td><td><strong>${format(r.requiredQty)}</strong> / ${format(r.stockQty)} ${r.unit}</td><td>${format(r.safetyStock)} ${r.unit}</td><td class="${r.status === '缺料' ? 'danger-text' : r.status === '库存低' ? 'warning-text' : ''}">${format(r.remainingQty)} ${r.unit}</td></tr>`;
+  }).join('');
+  return `<div class="analysis-banner"><div><span class="eyebrow">DECISION VIEW</span><h2>交付风险决策清单</h2><p>先看风险，再看时间原因和今天需要采取的行动。当前 ${shortage} 项缺料、${low} 项库存低。</p></div><div class="banner-metrics decision-metrics"><div class="danger"><strong>${riskCounts.high}</strong><span>高风险</span></div><div class="warning"><strong>${riskCounts.action}</strong><span>需要行动</span></div><div class="success"><strong>${riskCounts.ok}</strong><span>正常</span></div></div></div><article class="panel table-panel"><div class="panel-head decision-table-head"><div><span class="kicker">DECISION PRIORITY</span><h3>物料决策明细</h3><p>从左到右依次回答：哪个物料有风险、为什么、现在做什么。</p></div><button class="secondary" data-page="orders">← 修改订单</button></div><div class="decision-filter-bar"><span>风险筛选</span>${filterOptions.map(([value, label, count]) => `<button class="${analysisRiskFilter === value ? 'active' : ''}" data-analysis-filter="${value}">${label}<b>${count}</b></button>`).join('')}<small>当前显示 ${visibleResults.length} / ${decisionResults.length} 项</small></div>${visibleResults.length ? `<div class="table-wrap"><table class="analysis-table decision-table"><thead><tr><th>物料</th><th>决策风险</th><th>缺料数量</th><th>时间判断依据</th><th>现在应该做什么</th><th>受影响订单</th><th>库存状态</th><th>需求 / 库存</th><th>安全库存</th><th>预计剩余</th></tr></thead><tbody>${rows}</tbody></table></div>` : empty('当前筛选没有物料', '请选择其他风险状态或查看全部。')}</article><div class="rule-note"><strong>库存状态规则</strong><span><i class="dot red"></i>库存 &lt; 需求：缺料</span><span><i class="dot yellow"></i>库存 ≥ 需求，但剩余 &lt; 安全库存：库存低</span><span><i class="dot green"></i>其余：充足</span></div>`;
 }
 
 function empty(title, desc) { return `<div class="empty"><div>✓</div><strong>${title}</strong><p>${desc}</p></div>`; }
@@ -116,10 +143,11 @@ function render() {
   bindEvents();
 }
 
-function navigate(page) { currentPage = page; history.replaceState(null, '', `#${page}`); render(); window.scrollTo(0, 0); }
+function navigate(page, riskFilter) { currentPage = page; if (page === 'analysis') analysisRiskFilter = riskFilter || 'ALL'; history.replaceState(null, '', `#${page}`); render(); window.scrollTo(0, 0); }
 
 function bindEvents() {
-  document.querySelectorAll('[data-page]').forEach((el) => el.addEventListener('click', () => navigate(el.dataset.page)));
+  document.querySelectorAll('[data-page]').forEach((el) => el.addEventListener('click', () => navigate(el.dataset.page, el.dataset.riskFilter)));
+  document.querySelectorAll('[data-analysis-filter]').forEach((el) => el.addEventListener('click', () => { analysisRiskFilter = el.dataset.analysisFilter; render(); }));
   document.querySelectorAll('[data-product-tab]').forEach((el) => el.addEventListener('click', () => { sessionStorage.setItem('selectedProduct', el.dataset.productTab); render(); }));
   document.querySelectorAll('[data-order]').forEach((input) => input.addEventListener('input', () => updateOrder(input.dataset.order, input.value)));
   document.querySelectorAll('[data-delivery-date]').forEach((input) => input.addEventListener('change', () => updateOrderDeliveryDate(input.dataset.deliveryDate, input.value)));
