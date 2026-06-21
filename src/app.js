@@ -139,10 +139,9 @@ function handleAction(action, dataset) {
   if (action === 'reset-data') {
     if (!window.confirm('确定要重置所有演示数据吗？此操作将恢复初始产品、物料、BOM、库存和订单。')) return;
     resetStoredData();
-    data = clone(initialData);
     sessionStorage.removeItem('selectedProduct');
-    render();
-    return toast('演示数据已重置');
+    window.location.reload();
+    return;
   }
   if (action === 'add-product' || action === 'edit-product') return productModal(dataset.id);
   if (action === 'add-material' || action === 'edit-material') return materialModal(dataset.id);
