@@ -1,4 +1,4 @@
-import { initialData } from './data.js';
+import { DEFAULT_DELIVERY_DATE, DEFAULT_LEAD_TIME_DAYS, initialData } from './data.js';
 import { calculateMaterialRequirements, getInventoryStatusCounts, getSummary } from './mrp.js';
 import { loadData, resetStoredData, saveData } from './storage.js';
 
@@ -75,7 +75,7 @@ function bomPage() {
 }
 
 function inventoryPage() {
-  return tablePage({ description: '维护现有库存、安全库存和采购提前期；修改后分析结果立即重算。', columns: ['物料', '当前库存', '安全库存', '可用水平', '提前期', '操作'], rows: data.materials.map((m) => { const inv = data.inventory.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0, leadTimeDays: 0 }; const ratio = inv.safetyStock ? inv.stockQty / inv.safetyStock : 9; return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td><span class="stock-level ${ratio < 1 ? 'bad' : ratio < 2 ? 'mid' : ''}"><i></i>${ratio < 1 ? '低于安全线' : ratio < 2 ? '接近安全线' : '正常'}</span></td><td>${inv.leadTimeDays} 天</td><td><button class="icon-btn" data-action="edit-inventory" data-id="${m.id}">${icon('edit', 16)}</button></td></tr>` }) });
+  return tablePage({ description: '维护现有库存、安全库存和采购提前期；修改后分析结果立即重算。', columns: ['物料', '当前库存', '安全库存', '可用水平', '提前期', '操作'], rows: data.materials.map((m) => { const inv = data.inventory.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0, leadTimeDays: 0 }; const ratio = inv.safetyStock ? inv.stockQty / inv.safetyStock : 9; const leadTimeDays = m.leadTimeDays ?? inv.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS; return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td><span class="stock-level ${ratio < 1 ? 'bad' : ratio < 2 ? 'mid' : ''}"><i></i>${ratio < 1 ? '低于安全线' : ratio < 2 ? '接近安全线' : '正常'}</span></td><td>${leadTimeDays} 天</td><td><button class="icon-btn" data-action="edit-inventory" data-id="${m.id}">${icon('edit', 16)}</button></td></tr>` }) });
 }
 
 function ordersPage() {
@@ -110,7 +110,7 @@ function bindEvents() {
 
 function updateOrder(productId, qty) {
   let order = data.orders.find((o) => o.productId === productId);
-  if (!order) { order = { productId, orderQty: 0 }; data.orders.push(order); }
+  if (!order) { order = { productId, orderQty: 0, deliveryDate: DEFAULT_DELIVERY_DATE }; data.orders.push(order); }
   order.orderQty = Math.max(0, Number(qty) || 0);
   saveData(data);
   const total = data.orders.reduce((s, o) => s + Number(o.orderQty), 0);
@@ -149,11 +149,12 @@ function productModal(id) {
 }
 function materialModal(id) {
   const item = data.materials.find((m) => m.id === id);
-  showModal(item ? '编辑物料' : '新增物料', `${field('物料编码', 'code', item?.code)}${field('物料名称', 'name', item?.name)}${field('分类', 'category', item?.category)}${field('单位', 'unit', item?.unit)}`, (fd) => { const value = Object.fromEntries(fd); if (item) Object.assign(item, value); else { const newItem = { id: `m${Date.now()}`, ...value }; data.materials.push(newItem); data.inventory.push({ materialId: newItem.id, stockQty: 0, safetyStock: 0, leadTimeDays: 0 }); } });
+  showModal(item ? '编辑物料' : '新增物料', `${field('物料编码', 'code', item?.code)}${field('物料名称', 'name', item?.name)}${field('分类', 'category', item?.category)}${field('单位', 'unit', item?.unit)}`, (fd) => { const value = Object.fromEntries(fd); if (item) Object.assign(item, value); else { const newItem = { id: `m${Date.now()}`, ...value, leadTimeDays: DEFAULT_LEAD_TIME_DAYS }; data.materials.push(newItem); data.inventory.push({ materialId: newItem.id, stockQty: 0, safetyStock: 0, leadTimeDays: DEFAULT_LEAD_TIME_DAYS }); } });
 }
 function inventoryModal(id) {
   const m = data.materials.find((x) => x.id === id); let inv = data.inventory.find((x) => x.materialId === id);
-  showModal(`更新库存 · ${m.name}`, `${field('当前库存', 'stockQty', inv?.stockQty || 0, 'number', 'min="0" step="0.01"')}${field('安全库存', 'safetyStock', inv?.safetyStock || 0, 'number', 'min="0" step="0.01"')}${field('采购提前期（天）', 'leadTimeDays', inv?.leadTimeDays || 0, 'number', 'min="0" step="1"')}`, (fd) => { const value = Object.fromEntries(fd); Object.keys(value).forEach((k) => value[k] = Number(value[k])); if (inv) Object.assign(inv, value); else data.inventory.push({ materialId: id, ...value }); });
+  const leadTimeDays = m.leadTimeDays ?? inv?.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS;
+  showModal(`更新库存 · ${m.name}`, `${field('当前库存', 'stockQty', inv?.stockQty || 0, 'number', 'min="0" step="0.01"')}${field('安全库存', 'safetyStock', inv?.safetyStock || 0, 'number', 'min="0" step="0.01"')}${field('采购提前期（天）', 'leadTimeDays', leadTimeDays, 'number', 'min="0" step="1"')}`, (fd) => { const value = Object.fromEntries(fd); Object.keys(value).forEach((k) => value[k] = Number(value[k])); m.leadTimeDays = value.leadTimeDays; if (inv) Object.assign(inv, value); else data.inventory.push({ materialId: id, ...value }); });
 }
 function bomModal(productId, materialId) {
   const selected = productId || sessionStorage.getItem('selectedProduct') || data.products[0].id; const item = data.bom.find((b) => b.productId === selected && b.materialId === materialId);

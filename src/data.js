@@ -1,3 +1,6 @@
+export const DEFAULT_DELIVERY_DATE = '2026-07-31';
+export const DEFAULT_LEAD_TIME_DAYS = 0;
+
 export const initialData = {
   products: [
     { id: 'p1', code: 'HE-110S', name: '壁挂式取暖器', model: '小型款' },
@@ -5,16 +8,16 @@ export const initialData = {
     { id: 'p3', code: 'HE-110L', name: '壁挂式取暖器', model: '大型款' },
   ],
   materials: [
-    { id: 'm1', code: 'PCB-CTRL-01', name: '控制板', category: '电子件', unit: '件' },
-    { id: 'm2', code: 'PCB-PWR-01', name: '电源板', category: '电子件', unit: '件' },
-    { id: 'm3', code: 'CER-HEAT-01', name: '陶瓷片', category: '发热件', unit: '片' },
-    { id: 'm4', code: 'PKG-BOX-01', name: '包装箱', category: '包装件', unit: '个' },
-    { id: 'm5', code: 'CAB-PWR-01', name: '电源线', category: '线材', unit: '根' },
-    { id: 'm6', code: 'CASE-ABS-01', name: '外壳', category: '结构件', unit: '套' },
-    { id: 'm7', code: 'FAN-DC-01', name: '风扇', category: '机电件', unit: '个' },
-    { id: 'm8', code: 'KNOB-01', name: '旋钮', category: '结构件', unit: '个' },
-    { id: 'm9', code: 'LBL-01', name: '标签', category: '包装件', unit: '张' },
-    { id: 'm10', code: 'MAN-ZH-01', name: '说明书', category: '包装件', unit: '本' },
+    { id: 'm1', code: 'PCB-CTRL-01', name: '控制板', category: '电子件', unit: '件', leadTimeDays: 14 },
+    { id: 'm2', code: 'PCB-PWR-01', name: '电源板', category: '电子件', unit: '件', leadTimeDays: 12 },
+    { id: 'm3', code: 'CER-HEAT-01', name: '陶瓷片', category: '发热件', unit: '片', leadTimeDays: 20 },
+    { id: 'm4', code: 'PKG-BOX-01', name: '包装箱', category: '包装件', unit: '个', leadTimeDays: 7 },
+    { id: 'm5', code: 'CAB-PWR-01', name: '电源线', category: '线材', unit: '根', leadTimeDays: 10 },
+    { id: 'm6', code: 'CASE-ABS-01', name: '外壳', category: '结构件', unit: '套', leadTimeDays: 18 },
+    { id: 'm7', code: 'FAN-DC-01', name: '风扇', category: '机电件', unit: '个', leadTimeDays: 16 },
+    { id: 'm8', code: 'KNOB-01', name: '旋钮', category: '结构件', unit: '个', leadTimeDays: 9 },
+    { id: 'm9', code: 'LBL-01', name: '标签', category: '包装件', unit: '张', leadTimeDays: 3 },
+    { id: 'm10', code: 'MAN-ZH-01', name: '说明书', category: '包装件', unit: '本', leadTimeDays: 5 },
   ],
   bom: [
     ...['p1', 'p2', 'p3'].flatMap((productId) => [
@@ -45,8 +48,8 @@ export const initialData = {
     { materialId: 'm10', stockQty: 165, safetyStock: 20, leadTimeDays: 5 },
   ],
   orders: [
-    { productId: 'p1', orderQty: 100 },
-    { productId: 'p2', orderQty: 50 },
-    { productId: 'p3', orderQty: 20 },
+    { productId: 'p1', orderQty: 100, deliveryDate: '2026-07-15' },
+    { productId: 'p2', orderQty: 50, deliveryDate: '2026-07-25' },
+    { productId: 'p3', orderQty: 20, deliveryDate: '2026-08-05' },
   ],
 };
