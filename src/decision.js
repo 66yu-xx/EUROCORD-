@@ -56,3 +56,34 @@ export function getActionSuggestion(riskLevel) {
   if (!suggestion) throw new RangeError(`Unsupported risk level: ${riskLevel}`);
   return suggestion;
 }
+
+export function calculateDecisionResults(mrpResults, context = {}) {
+  const materials = context.materials ?? [];
+  const today = context.today ?? new Date();
+  const materialsById = new Map(materials.map((material) => [material.id, material]));
+
+  return mrpResults.map((result) => {
+    const materialId = result.materialId ?? result.id;
+    const material = materialsById.get(materialId);
+    const canonicalLeadTime = Number(material?.leadTimeDays);
+    // Missing canonical Lead Time falls back to zero so legacy/custom data remains calculable.
+    const leadTimeDays = Number.isFinite(canonicalLeadTime) ? canonicalLeadTime : 0;
+    const earliestDeliveryDate = result.earliestDeliveryDate ?? null;
+    // Missing delivery context is treated as due today: no time buffer is assumed.
+    const remainingDays = getRemainingDays(earliestDeliveryDate ?? today, today);
+    const riskLevel = getRiskLevel(result.shortageQty, leadTimeDays, remainingDays);
+    const actionSuggestion = getActionSuggestion(riskLevel);
+
+    return {
+      ...result,
+      materialId,
+      materialName: result.materialName ?? result.name,
+      demandQty: result.demandQty ?? result.requiredQty,
+      leadTimeDays,
+      earliestDeliveryDate,
+      remainingDays,
+      riskLevel,
+      actionSuggestion,
+    };
+  });
+}
