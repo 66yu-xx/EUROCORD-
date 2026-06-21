@@ -59,10 +59,17 @@ function statCard(label, value, hint, tone, ico) {
 function dashboard(results) {
   const summary = getSummary(data, results);
   const alerts = results.filter((r) => r.status !== '充足');
+  const decisionResults = calculateDecisionResults(results, { materials: data.materials, today: new Date() });
+  const riskCounts = {
+    high: decisionResults.filter((result) => result.riskLevel === 'High Risk').length,
+    action: decisionResults.filter((result) => result.riskLevel === 'Action Required').length,
+    ok: decisionResults.filter((result) => result.riskLevel === 'OK').length,
+  };
   return `<div class="hero"><div><span class="eyebrow">TODAY'S OVERVIEW</span><h2>早上好，生产计划一目了然。</h2><p>根据当前模拟订单与库存，系统已完成 BOM 展开和缺料计算。</p></div><button class="primary" data-page="orders">运行订单模拟 ${icon('chart', 17)}</button></div>
     <div class="stats-grid">${statCard('产品数量', summary.productCount, '已维护成品', 'blue', 'box')}${statCard('物料数量', summary.materialCount, '基础物料主数据', 'violet', 'layers')}${statCard('缺料物料', summary.shortageCount, summary.shortageCount ? '需要立即处理' : '当前无缺料', 'red', 'chart')}${statCard('库存低物料', summary.lowStockCount, '低于安全库存', 'amber', 'warehouse')}</div>
     <div class="dashboard-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">需求风险</span><h3>物料预警</h3></div><button class="text-button" data-page="analysis">查看完整分析 →</button></div>${alerts.length ? `<div class="alert-list">${alerts.slice(0, 5).map((r) => { const isShortage = r.status === '缺料'; return `<div class="alert-row"><div class="material-avatar">${r.name[0]}</div><div class="grow"><strong>${r.name}</strong><small>${r.code} · 剩余 ${format(r.remainingQty)} ${r.unit}</small></div>${badge(r.status)}<div class="number ${isShortage ? 'danger' : 'warning'}"><small>${isShortage ? '缺口' : '剩余 / 安全'}</small><strong>${isShortage ? format(r.shortageQty) : `${format(r.remainingQty)} / ${format(r.safetyStock)}`}</strong></div></div>` }).join('')}</div>` : empty('没有库存预警', '所有需求物料均处于安全库存之上。')}</article>
-    <article class="panel"><div class="panel-head"><div><span class="kicker">模拟订单</span><h3>当前生产组合</h3></div></div><div class="order-bars">${data.orders.map((o, i) => { const p = data.products.find((x) => x.id === o.productId); const max = Math.max(...data.orders.map((x) => x.orderQty), 1); return `<div class="bar-item"><div><strong>${p.code}</strong><span>${o.orderQty} 台</span></div><div class="bar-track"><i style="width:${o.orderQty / max * 100}%;--delay:${i * 80}ms"></i></div><small>${p.model}</small></div>` }).join('')}</div><div class="total-line"><span>模拟订单总量</span><strong>${format(data.orders.reduce((s, o) => s + Number(o.orderQty), 0))} <small>台</small></strong></div></article></div>`;
+    <article class="panel"><div class="panel-head"><div><span class="kicker">模拟订单</span><h3>当前生产组合</h3></div></div><div class="order-bars">${data.orders.map((o, i) => { const p = data.products.find((x) => x.id === o.productId); const max = Math.max(...data.orders.map((x) => x.orderQty), 1); return `<div class="bar-item"><div><strong>${p.code}</strong><span>${o.orderQty} 台</span></div><div class="bar-track"><i style="width:${o.orderQty / max * 100}%;--delay:${i * 80}ms"></i></div><small>${p.model}</small></div>` }).join('')}</div><div class="total-line"><span>模拟订单总量</span><strong>${format(data.orders.reduce((s, o) => s + Number(o.orderQty), 0))} <small>台</small></strong></div></article></div>
+    <div class="rule-note"><strong>决策风险概览</strong><span>基于缺料、最早交期和采购周期判断。</span><span>${decisionBadge('High Risk')} <b>${riskCounts.high}</b></span><span>${decisionBadge('Action Required')} <b>${riskCounts.action}</b></span><span>${decisionBadge('OK')} <b>${riskCounts.ok}</b></span></div>`;
 }
 
 function tablePage({ title, description, action, columns, rows }) {
