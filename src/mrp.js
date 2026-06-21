@@ -13,6 +13,7 @@ export function getInventoryStatus(demandQty, stockQty, safetyStock) {
 export function calculateMaterialRequirements({ products, materials, bom, inventory, orders }) {
   const demand = new Map();
   const breakdown = new Map();
+  const earliestDeliveryDates = new Map();
 
   for (const order of orders) {
     const orderQty = Math.max(0, Number(order.orderQty) || 0);
@@ -23,7 +24,11 @@ export function calculateMaterialRequirements({ products, materials, bom, invent
       const qty = orderQty * Number(row.qtyPerProduct);
       demand.set(row.materialId, (demand.get(row.materialId) || 0) + qty);
       if (!breakdown.has(row.materialId)) breakdown.set(row.materialId, []);
-      breakdown.get(row.materialId).push({ productCode: product.code, orderQty, qtyPerProduct: row.qtyPerProduct, qty });
+      breakdown.get(row.materialId).push({ productCode: product.code, orderQty, qtyPerProduct: row.qtyPerProduct, qty, deliveryDate: order.deliveryDate ?? null });
+      if (order.deliveryDate) {
+        const currentEarliest = earliestDeliveryDates.get(row.materialId);
+        if (!currentEarliest || order.deliveryDate < currentEarliest) earliestDeliveryDates.set(row.materialId, order.deliveryDate);
+      }
     }
   }
 
@@ -38,7 +43,7 @@ export function calculateMaterialRequirements({ products, materials, bom, invent
       const inventoryStatus = getInventoryStatus(requiredQty, stockQty, safetyStock);
       const shortageQty = inventoryStatus === 'shortage' ? requiredQty - stockQty : 0;
       const status = INVENTORY_STATUS_LABELS[inventoryStatus];
-      return { ...material, requiredQty, stockQty, safetyStock, remainingQty, shortageQty, status, leadTimeDays: inventoryRow.leadTimeDays || 0, breakdown: breakdown.get(material.id) };
+      return { ...material, requiredQty, stockQty, safetyStock, remainingQty, shortageQty, status, leadTimeDays: inventoryRow.leadTimeDays || 0, earliestDeliveryDate: earliestDeliveryDates.get(material.id) ?? null, breakdown: breakdown.get(material.id) };
     })
     .sort((a, b) => ({ '缺料': 0, '库存低': 1, '充足': 2 }[a.status] - { '缺料': 0, '库存低': 1, '充足': 2 }[b.status]));
 }

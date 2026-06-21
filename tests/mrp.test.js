@@ -26,6 +26,67 @@ test('按多个产品订单正确汇总 BOM 需求', () => {
   assert.equal(results.find((x) => x.name === '陶瓷片').requiredQty, 430);
 });
 
+test('单一订单的交付日期保留在物料结果和明细中', () => {
+  const result = calculateMaterialRequirements({
+    products: [{ id: 'p1', code: 'P1' }],
+    materials: [{ id: 'm1', code: 'M1', name: '物料一', unit: '件' }],
+    bom: [{ productId: 'p1', materialId: 'm1', qtyPerProduct: 2 }],
+    inventory: [{ materialId: 'm1', stockQty: 0, safetyStock: 0 }],
+    orders: [{ productId: 'p1', orderQty: 3, deliveryDate: '2026-07-20' }],
+  })[0];
+
+  assert.equal(result.requiredQty, 6);
+  assert.equal(result.earliestDeliveryDate, '2026-07-20');
+  assert.equal(result.breakdown[0].deliveryDate, '2026-07-20');
+});
+
+test('同一物料跨多个订单使用最早交付日期且忽略零数量订单', () => {
+  const result = calculateMaterialRequirements({
+    products: [{ id: 'p1', code: 'P1' }, { id: 'p2', code: 'P2' }, { id: 'p3', code: 'P3' }],
+    materials: [{ id: 'm1', code: 'M1', name: '通用件', unit: '件' }],
+    bom: [
+      { productId: 'p1', materialId: 'm1', qtyPerProduct: 1 },
+      { productId: 'p2', materialId: 'm1', qtyPerProduct: 1 },
+      { productId: 'p3', materialId: 'm1', qtyPerProduct: 1 },
+    ],
+    inventory: [{ materialId: 'm1', stockQty: 0, safetyStock: 0 }],
+    orders: [
+      { productId: 'p1', orderQty: 2, deliveryDate: '2026-07-20' },
+      { productId: 'p2', orderQty: 3, deliveryDate: '2026-07-10' },
+      { productId: 'p3', orderQty: 0, deliveryDate: '2026-07-01' },
+    ],
+  })[0];
+
+  assert.equal(result.requiredQty, 5);
+  assert.equal(result.earliestDeliveryDate, '2026-07-10');
+  assert.equal(result.breakdown.length, 2);
+});
+
+test('不同物料之间不会串用交付日期', () => {
+  const results = calculateMaterialRequirements({
+    products: [{ id: 'p1', code: 'P1' }, { id: 'p2', code: 'P2' }],
+    materials: [
+      { id: 'm1', code: 'M1', name: '物料一', unit: '件' },
+      { id: 'm2', code: 'M2', name: '物料二', unit: '件' },
+    ],
+    bom: [
+      { productId: 'p1', materialId: 'm1', qtyPerProduct: 1 },
+      { productId: 'p2', materialId: 'm2', qtyPerProduct: 1 },
+    ],
+    inventory: [
+      { materialId: 'm1', stockQty: 0, safetyStock: 0 },
+      { materialId: 'm2', stockQty: 0, safetyStock: 0 },
+    ],
+    orders: [
+      { productId: 'p1', orderQty: 1, deliveryDate: '2026-07-20' },
+      { productId: 'p2', orderQty: 1, deliveryDate: '2026-07-10' },
+    ],
+  });
+
+  assert.equal(results.find((item) => item.id === 'm1').earliestDeliveryDate, '2026-07-20');
+  assert.equal(results.find((item) => item.id === 'm2').earliestDeliveryDate, '2026-07-10');
+});
+
 test('正确应用缺料和库存低规则', () => {
   const results = calculateMaterialRequirements(initialData);
   assert.equal(results.find((x) => x.name === '控制板').status, '缺料');
