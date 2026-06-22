@@ -1,40 +1,20 @@
 # Project Status
 
-## 当前版本
+## 当前状态
 
-V2.2
+- 项目：`Lufuta Material Management System Lite`
+- 当前阶段：Project Initialization / Blueprint Alignment
+- 当前分支：`lufuta-material-system-lite`
+- 当前目标：锁定朋友提供的物料管理系统蓝图方向，为后续功能开发建立一致的项目基线。
 
-## 状态
+## 当前工作边界
 
-Active Development
+- 当前只初始化项目方向与基础文档。
+- 当前不做功能开发。
+- 旧 ERP Lite / MRP Lite 代码仅作为技术地基评估和复用，不作为业务路线依据。
 
-## 已完成
+## 下一阶段
 
-- 产品管理
-- 物料管理
-- BOM 管理
-- 库存管理
-- 订单模拟
-- Dashboard
-- 缺料分析
-- 通用件汇总
-- LocalStorage 持久化
-- Demo 数据重置
-- 安全库存规则
-- 库存状态引擎
-- 库存预警展示
+Phase 1：基础资料与库存台账骨架。
 
-## Current Focus
-
-V2.3.1 Product Philosophy
-
-## Next Phase
-
-V3 Procurement Cycle
-
-## 后续路线
-
-- V4 替代料
-- V5 供应商
-- V6 采购建议
-- V7 生产计划
+进入 Phase 1 前，应继续梳理朋友蓝图中的核心资料、库存台账字段、日常角色和业务流程。

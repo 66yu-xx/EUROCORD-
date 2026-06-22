@@ -1,44 +1,43 @@
 # Project Rules
 
-本文档定义 MRP Lite 项目的长期协作规则。继续任何开发任务前，必须先阅读本文件及项目根目录中的其他基线文档。
+## 项目定位
 
-## 角色
+- 项目名称：`Lufuta Material Management System Lite`（Lufuta 物料管理系统 Lite）。
+- 本项目的业务主线来自朋友提供的 `Y-Lufuta_Material_Management_System.rar` 中的物料管理系统蓝图。
+- 蓝图用于确定业务流程和业务边界，不要求照搬其中的 Excel/VBA 实现。
+- 禁止使用昨天的 ERP Lite / MRP Lite 业务路线主导本项目。
+- 昨天的旧代码只能作为技术基础复用，不能决定本项目的业务主线。
+- MRP 只能作为后期可选功能之一，不能成为本项目的业务主线。
 
-- User = Product Owner
-- ChatGPT = Architect
-- Codex = Developer
+## 产品与部署原则
 
-## 开发原则
+- 禁止复制 Excel/VBA 的多文件、多模板、多按钮结构。
+- 系统必须做成统一入口的网页系统。
+- 最终部署目标是朋友工厂的内网服务器。
+- 老板、仓库、采购、生产等部门通过浏览器访问系统。
+- 业务数据最终必须集中保存在服务器数据库中。
+- Excel 只可作为数据导入和导出入口，不得作为主数据库。
 
-1. 先验证逻辑。
-2. 后优化界面。
-3. 后增加功能。
+## 代码与数据规则
 
-## 开发流程
+- 当前原型阶段可以使用简化 storage，包括前端本地存储。
+- 代码必须保留未来迁移到后台 API 和服务器数据库的能力。
+- 页面不得直接或深度绑定 `LocalStorage` 或任何具体存储实现。
+- UI、业务逻辑与数据访问必须分层；存储实现应可替换。
+- 复用旧代码前，必须确认其符合当前蓝图和目标架构。
 
-### 开发前
+## 当前暂不开发
 
-- 检查仓库根目录。
-- 检查当前分支。
-- 检查 `git status`。
-- 阅读 `PROJECT_RULES.md`、`PROJECT_STATUS.md`、`ROADMAP.md`、`ARCHITECTURE.md`、`CHANGELOG.md`。
+- 复杂权限体系
+- 审批流程
+- 财务功能
+- 采购合同
+- PDF 归档
+- 多用户登录
 
-### 开发后
+## 协作与 Git 规则
 
-- 运行全部测试。
-- 运行 `git diff --check`。
-- 返回修改文件与测试结果。
-
-## Git 规则
-
-未经 Product Owner 明确批准，不提交 Git。
-
-## 禁止提前开发
-
-- 登录
-- 用户权限
-- 多公司
-- 财务
-- AI 聊天
-- APP
-
+- Product Owner 明确业务方向，Developer 按蓝图和本文件实施。
+- 开发前确认 repo 根目录、当前分支和 `git status`。
+- 未经 Product Owner 明确批准，不执行 commit、合并或修改 `main`。
+- 每次变更应保持范围清晰，并报告修改文件、验证结果和遗留事项。
