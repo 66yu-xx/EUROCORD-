@@ -1,9 +1,19 @@
 import { initialData } from './data.js';
 import { calculateMaterialRequirements, getInventoryStatusCounts, getSummary } from './mrp.js';
-import { loadData, resetStoredData, saveData } from './storage.js';
+import { createAuditService } from './services/auditService.js';
+import { createInventoryService } from './services/inventoryService.js';
+import { createMaterialService } from './services/materialService.js';
+import { createProductService } from './services/productService.js';
+import { createStorageAdapter, saveData } from './storage.js';
+import { createSnapshotRepository } from './storage/snapshotRepository.js';
 
-const clone = (value) => JSON.parse(JSON.stringify(value));
-let data = loadData(initialData);
+const storageAdapter = createStorageAdapter();
+const repository = createSnapshotRepository({ adapter: storageAdapter, fallbackData: initialData });
+const materialService = createMaterialService({ repository });
+const productService = createProductService({ repository });
+const inventoryService = createInventoryService({ repository });
+const auditService = createAuditService({ repository });
+let data = repository.getSnapshot();
 let currentPage = 'dashboard';
 let toastTimer;
 
@@ -48,9 +58,13 @@ function statCard(label, value, hint, tone, ico) {
 }
 
 function dashboard() {
-  const lowStockCount = data.inventory.filter((row) => Number(row.stockQty) < Number(row.safetyStock)).length;
+  const materials = materialService.listMaterials();
+  const products = productService.listProducts();
+  const balances = inventoryService.listBalances();
+  const pendingDocuments = auditService.listPendingDocuments();
+  const lowStockCount = balances.filter((row) => Number(row.stockQty) < Number(row.safetyStock)).length;
   return `<div class="hero"><div><span class="eyebrow">PHASE 1 FOUNDATION</span><h2>Lufuta 物料管理系统 Lite</h2><p>统一管理物料资料、产品 BOM、库存台账与待审核业务入口。</p></div><span class="phase-chip">基础骨架 · 尚未连接后台</span></div>
-    <div class="stats-grid">${statCard('物料资料', data.materials.length, '当前原型记录', 'violet', 'layers')}${statCard('产品 / BOM', data.products.length, '产品基础资料', 'blue', 'box')}${statCard('库存风险', lowStockCount, '低于安全库存的台账项', 'amber', 'warehouse')}${statCard('待审核流水', 0, 'Phase 1 审核池占位', 'red', 'chart')}</div>
+    <div class="stats-grid">${statCard('物料资料', materials.length, '通过 materialService 读取', 'violet', 'layers')}${statCard('产品 / BOM', products.length, '通过 productService 读取', 'blue', 'box')}${statCard('库存风险', lowStockCount, '通过 inventoryService 汇总', 'amber', 'warehouse')}${statCard('待审核流水', pendingDocuments.length, '通过 auditService 读取', 'red', 'chart')}</div>
     <div class="dashboard-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">MASTER DATA</span><h3>基础资料入口</h3></div></div><div class="entry-grid"><button class="entry-card" data-page="materials">${icon('layers', 22)}<span><strong>物料资料</strong><small>编码、名称、分类与单位</small></span></button><button class="entry-card" data-page="product-bom">${icon('git', 22)}<span><strong>产品 / BOM</strong><small>产品与物料组成关系</small></span></button><button class="entry-card" data-page="inventory">${icon('warehouse', 22)}<span><strong>库存台账</strong><small>只读查看当前库存骨架</small></span></button></div></article>
     <article class="panel"><div class="panel-head"><div><span class="kicker">CONTROL POOL</span><h3>待审核与日常入口</h3></div><button class="text-button" data-page="audit">进入审核池 →</button></div><div class="flow-strip"><span>单据保存</span><b>→</b><span>待审核流水</span><b>→</b><span>审核后影响库存</span></div><div class="placeholder-copy"><strong>Phase 1 仅建立概念骨架</strong><p>完整表单、审批权限和库存过账将在后续阶段实现。</p></div></article></div>`;
 }
@@ -64,7 +78,9 @@ function productsPage() {
 }
 
 function materialsPage() {
-  return tablePage({ description: '统一管理 BOM、库存和缺料分析共用的物料主数据。', action: `<button class="primary" data-action="add-material">${icon('plus', 17)} 新增物料</button>`, columns: ['物料编码', '物料名称', '分类', '单位', '引用 BOM', '操作'], rows: data.materials.map((m) => `<tr><td><strong class="code">${m.code}</strong></td><td>${m.name}</td><td><span class="soft-tag">${m.category}</span></td><td>${m.unit}</td><td>${data.bom.filter((b) => b.materialId === m.id).length} 个产品</td><td><button class="icon-btn" data-action="edit-material" data-id="${m.id}">${icon('edit', 16)}</button></td></tr>`) });
+  const materials = materialService.listMaterials();
+  const bomItems = productService.listBOMItems();
+  return tablePage({ description: '通过 materialService 只读展示物料主数据；新增与编辑将在后续阶段接入。', columns: ['物料编码', '物料名称', '分类', '单位', '引用 BOM', '当前阶段'], rows: materials.map((m) => `<tr><td><strong class="code">${m.code}</strong></td><td>${m.name}</td><td><span class="soft-tag">${m.category}</span></td><td>${m.unit}</td><td>${bomItems.filter((b) => b.materialId === m.id).length} 个产品</td><td><span class="muted">只读</span></td></tr>`) });
 }
 
 function bomPage() {
@@ -74,17 +90,32 @@ function bomPage() {
 }
 
 function inventoryPage() {
-  return `${skeletonNotice('库存台账', 'Phase 1 仅提供台账查看骨架；库存余额不能在页面直接修改，未来由审核后的库存流水统一维护。')}${tablePage({ description: '查看物料当前库存、安全库存和基础风险状态。', columns: ['物料', '当前库存', '安全库存', '风险状态', '仓位 / 库位', '最后更新'], rows: data.materials.map((m) => { const inv = data.inventory.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">待补充</span></td><td><span class="muted">原型数据</span></td></tr>` }) })}`;
+  const materials = materialService.listMaterials();
+  const balances = inventoryService.listBalances();
+  return `${skeletonNotice('库存台账', 'Phase 1 仅提供台账查看骨架；库存余额不能在页面直接修改，未来由审核后的库存流水统一维护。')}${tablePage({ description: '通过 inventoryService 只读展示当前库存、安全库存和基础风险状态。', columns: ['物料', '当前库存', '安全库存', '风险状态', '仓位 / 库位', '最后更新'], rows: materials.map((m) => { const inv = balances.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">待补充</span></td><td><span class="muted">服务层数据</span></td></tr>` }) })}`;
 }
 
 function productBomPage() {
-  const selected = sessionStorage.getItem('selectedProduct') || data.products[0]?.id;
-  const items = data.bom.filter((row) => row.productId === selected);
-  return `${skeletonNotice('产品 / BOM', 'Phase 1 展示产品与 BOM 基础关系；版本、损耗率和生效日期将在后续数据对象适配中补齐。')}<div class="product-tabs">${data.products.map((p) => `<button class="product-tab ${p.id === selected ? 'active' : ''}" data-product-tab="${p.id}"><small>${p.model}</small><strong>${p.code}</strong><span>${data.bom.filter((b) => b.productId === p.id).length} 项物料</span></button>`).join('')}</div><article class="panel table-panel"><div class="panel-head bom-title"><div><span class="kicker">PRODUCT / BOM SKELETON</span><h3>${productName(selected)} 物料组成</h3></div><span class="version">Phase 1</span></div><div class="table-wrap"><table><thead><tr><th>序号</th><th>物料编码</th><th>物料名称</th><th>分类</th><th>单台用量</th><th>单位</th><th>BOM 版本</th></tr></thead><tbody>${items.map((row, index) => { const material = data.materials.find((m) => m.id === row.materialId); return `<tr><td class="muted">${String(index + 1).padStart(2, '0')}</td><td><strong class="code">${material.code}</strong></td><td>${material.name}</td><td><span class="soft-tag">${material.category}</span></td><td><strong>${row.qtyPerProduct}</strong></td><td>${material.unit}</td><td><span class="muted">待适配</span></td></tr>`; }).join('')}</tbody></table></div></article>`;
+  const products = productService.listProducts();
+  const materials = materialService.listMaterials();
+  const selected = sessionStorage.getItem('selectedProduct') || products[0]?.id;
+  const items = productService.listBOMItems(selected);
+  const selectedProduct = products.find((product) => product.id === selected);
+  return `${skeletonNotice('产品 / BOM', 'Phase 1 通过 productService 展示产品与 BOM 基础关系；版本、损耗率和生效日期将在后续阶段补齐。')}<div class="product-tabs">${products.map((p) => `<button class="product-tab ${p.id === selected ? 'active' : ''}" data-product-tab="${p.id}"><small>${p.model}</small><strong>${p.code}</strong><span>${productService.listBOMItems(p.id).length} 项物料</span></button>`).join('')}</div><article class="panel table-panel"><div class="panel-head bom-title"><div><span class="kicker">PRODUCT / BOM SKELETON</span><h3>${selectedProduct?.code || '未知产品'} 物料组成</h3></div><span class="version">Phase 1 · 只读</span></div><div class="table-wrap"><table><thead><tr><th>序号</th><th>物料编码</th><th>物料名称</th><th>分类</th><th>单台用量</th><th>单位</th><th>BOM 版本</th></tr></thead><tbody>${items.map((row, index) => { const material = materials.find((m) => m.id === row.materialId); if (!material) return ''; return `<tr><td class="muted">${String(index + 1).padStart(2, '0')}</td><td><strong class="code">${material.code}</strong></td><td>${material.name}</td><td><span class="soft-tag">${material.category}</span></td><td><strong>${row.qtyPerProduct}</strong></td><td>${material.unit}</td><td><span class="muted">待适配</span></td></tr>`; }).join('')}</tbody></table></div></article>`;
 }
 
 function auditPage() {
-  return `${skeletonNotice('待审核流水 / 审核池', '保留朋友蓝图“先进入待审核流水、审核通过后才影响库存”的核心思想。本阶段不实现真实审批和库存过账。')}<article class="panel table-panel"><div class="panel-head"><div><span class="kicker">PENDING DOCUMENTS</span><h3>待审核业务记录</h3></div><span class="version">0 条 · 骨架</span></div><div class="table-wrap"><table><thead><tr><th>单据编号</th><th>单据类型</th><th>申请人</th><th>提交时间</th><th>库存影响</th><th>风险标记</th><th>审核状态</th></tr></thead><tbody><tr><td colspan="7"><div class="empty-table"><strong>暂无待审核记录</strong><p>Phase 1A 尚未实现单据保存和审核流程。</p></div></td></tr></tbody></table></div></article>`;
+  const pendingDocuments = auditService.listPendingDocuments();
+  const auditItems = auditService.listAuditItems();
+  const rows = pendingDocuments.map((document) => {
+    const auditItem = auditItems.find((item) => item.documentId === document.id);
+    const status = auditItem?.auditStatus || document.auditStatus || 'pending';
+    const riskFlags = document.riskFlags?.length ? document.riskFlags.join('、') : '无';
+    const submittedAt = document.submittedAt ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(document.submittedAt)) : '待提交';
+    return `<tr><td><strong class="code">${document.documentNo || '待编号'}</strong></td><td>${document.documentType || '未分类'}</td><td>${document.applicantName || '未填写'}</td><td>${submittedAt}</td><td>${document.inventoryEffect || 'none'}</td><td>${riskFlags}</td><td><span class="soft-tag">${status}</span></td></tr>`;
+  });
+  const body = rows.length ? rows.join('') : '<tr><td colspan="7"><div class="empty-table"><strong>暂无待审核记录</strong><p>当前已通过 auditService 读取审核池；单据保存和真实审批仍为占位。</p></div></td></tr>';
+  return `${skeletonNotice('待审核流水 / 审核池', '保留朋友蓝图“先进入待审核流水、审核通过后才影响库存”的核心思想。本阶段仅通过 auditService 只读展示，不执行审批或库存过账。')}<article class="panel table-panel"><div class="panel-head"><div><span class="kicker">PENDING DOCUMENTS</span><h3>待审核业务记录</h3></div><span class="version">${pendingDocuments.length} 条 · 只读</span></div><div class="table-wrap"><table><thead><tr><th>单据编号</th><th>单据类型</th><th>申请人</th><th>提交时间</th><th>库存影响</th><th>风险标记</th><th>审核状态</th></tr></thead><tbody>${body}</tbody></table></div></article>`;
 }
 
 function documentPlaceholder(type, direction, description) {
@@ -110,7 +141,7 @@ function empty(title, desc) { return `<div class="empty"><div>✓</div><strong>$
 function render() {
   const renderers = {
     dashboard,
-    materials: () => `${skeletonNotice('物料资料', '当前复用旧 Demo 的基础列表作为 Phase 1 结构预览，完整字段和 service 分层尚未实现。')}${materialsPage()}`,
+    materials: () => `${skeletonNotice('物料资料', '当前通过 materialService 只读展示原型数据；完整字段、维护表单与校验规则尚未实现。')}${materialsPage()}`,
     'product-bom': productBomPage,
     inventory: inventoryPage,
     audit: auditPage,
@@ -146,8 +177,9 @@ function handleAction(action, dataset) {
   if (action === 'analyze') return navigate('analysis');
   if (action === 'reset-data') {
     if (!window.confirm('确定要重置当前原型数据吗？')) return;
-    resetStoredData();
-    data = clone(initialData);
+    storageAdapter.reset();
+    repository.reload();
+    data = repository.getSnapshot();
     sessionStorage.removeItem('selectedProduct');
     render();
     return toast('原型数据已重置');
