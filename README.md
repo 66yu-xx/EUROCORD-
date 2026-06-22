@@ -1,20 +1,22 @@
-# MRP LITE V1 — 中文 BOM 缺料分析 Demo
+# Lufuta 物料管理系统 Lite
 
-一个无登录、无数据库的前端 Demo，用于验证“订单 → BOM 展开 → 库存对比 → 缺料分析”的底层逻辑。
+基于朋友提供的 `Y-Lufuta_Material_Management_System` 业务蓝图重新实现的轻量网页物料管理系统。
+
+当前处于 Phase 1：先建立统一网页入口、物料资料、产品 / BOM、库存台账、待审核流水和日常单据入口骨架。现阶段仍是前端原型，最终目标是在工厂内网服务器部署，并通过后台 API 与服务器数据库集中保存数据。
 
 ## 继续项目前请先阅读
-
-以下文件是项目的唯一事实来源（Single Source of Truth）：
 
 - [PROJECT_RULES.md](./PROJECT_RULES.md)
 - [PROJECT_STATUS.md](./PROJECT_STATUS.md)
 - [ROADMAP.md](./ROADMAP.md)
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
-- [CHANGELOG.md](./CHANGELOG.md)
+- [BLUEPRINT_RELATIONSHIP_AUDIT.md](./BLUEPRINT_RELATIONSHIP_AUDIT.md)
+- [PHASE_1_SCOPE.md](./PHASE_1_SCOPE.md)
+- [CODEBASE_ADAPTATION_AUDIT.md](./CODEBASE_ADAPTATION_AUDIT.md)
 
 ## 启动
 
-项目没有第三方运行依赖。在项目目录执行：
+项目没有第三方运行依赖。在项目目录启动静态 HTTP Server：
 
 ```powershell
 python -m http.server 8080
@@ -22,15 +24,21 @@ python -m http.server 8080
 
 然后访问 <http://localhost:8080>。
 
-也可以在已安装 Node.js 与 Python 的环境中执行 `npm start`。运行逻辑测试：`npm test`。
+运行逻辑测试：
 
-## 代码结构
+```powershell
+npm test
+```
 
-- `src/data.js`：初始演示数据，可继续增加产品、物料、BOM 和库存
-- `src/storage.js`：浏览器 LocalStorage 数据保存、读取与重置
-- `src/mrp.js`：独立 MRP 需求计算和状态规则
-- `src/app.js`：页面、路由与本地交互
-- `src/styles.css`：界面样式
-- `tests/mrp.test.js`：计算逻辑测试
+## 当前代码结构
 
-产品、物料、BOM、库存和订单模拟数据保存在当前浏览器的 LocalStorage 中，刷新页面后仍会保留。点击左侧底部的“重置演示数据”可恢复初始数据。数据不会上传到服务器或写入数据库。
+- `src/app.js`：统一入口、Hash 导航和 Phase 1 页面骨架
+- `src/data.js`：当前前端原型数据，后续将迁移为新的领域数据对象
+- `src/storage.js`：当前简化存储适配器
+- `src/mrp.js`：从旧 Demo 保留的后期候选计算能力，不再主导当前 UI
+- `src/styles.css`：响应式页面样式
+- `tests/`：现有计算与 storage 回归测试
+
+## 当前边界
+
+Phase 1A 只完成产品身份与导航骨架切换。采购计划、完整审核、库存过账、登录权限、Excel/PDF、后台 API 和数据库均未实现。

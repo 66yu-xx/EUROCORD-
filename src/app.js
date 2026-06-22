@@ -8,8 +8,9 @@ let currentPage = 'dashboard';
 let toastTimer;
 
 const pages = [
-  ['dashboard', '概览', 'grid'], ['products', '产品管理', 'box'], ['materials', '物料管理', 'layers'],
-  ['bom', 'BOM 管理', 'git'], ['inventory', '库存管理', 'warehouse'], ['orders', '订单模拟', 'cart'], ['analysis', '缺料分析', 'chart'],
+  ['dashboard', '首页', 'grid'], ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'],
+  ['inventory', '库存台账', 'warehouse'], ['audit', '待审核流水', 'chart'], ['inbound', '入库', 'box'],
+  ['outbound', '领料', 'cart'], ['supplier-return', '供应商退货', 'warehouse'],
 ];
 
 const icons = {
@@ -29,16 +30,15 @@ const format = (num) => Number(num).toLocaleString('zh-CN');
 const STATUS_TONES = { '缺料': 'danger', '库存低': 'warning', '充足': 'success' };
 const badge = (status) => `<span class="badge badge-${STATUS_TONES[status]}"><i></i>${status}</span>`;
 
-function appShell(content, results) {
+function appShell(content) {
   const active = pages.find((p) => p[0] === currentPage);
-  const statusCounts = getInventoryStatusCounts(results);
   return `<div class="shell">
     <aside class="sidebar">
-      <div class="brand"><div class="brand-mark">M</div><div><strong>MRP LITE</strong><small>物料需求计划</small></div></div>
-      <nav><p>工作台</p>${pages.map(([id, label, ico]) => `<button class="nav-item ${currentPage === id ? 'active' : ''}" data-page="${id}">${icon(ico)}<span>${label}</span>${id === 'analysis' && statusCounts.shortageCount ? `<b>${statusCounts.shortageCount}</b>` : ''}</button>`).join('')}</nav>
-      <div class="sidebar-footer"><div class="demo-dot"></div><div><strong>演示环境</strong><small>数据保存在此浏览器</small></div><button class="reset-button" data-action="reset-data" title="重置演示数据"><b>↺</b><span>重置演示数据</span></button></div>
+      <div class="brand"><div class="brand-mark">L</div><div><strong>LUFUTA LITE</strong><small>物料管理系统</small></div></div>
+      <nav><p>Phase 1 工作台</p>${pages.map(([id, label, ico]) => `<button class="nav-item ${currentPage === id ? 'active' : ''}" data-page="${id}">${icon(ico)}<span>${label}</span></button>`).join('')}</nav>
+      <div class="sidebar-footer"><div class="demo-dot"></div><div><strong>Phase 1 原型</strong><small>当前使用浏览器存储</small></div><button class="reset-button" data-action="reset-data" title="重置原型数据"><b>↺</b><span>重置原型数据</span></button></div>
     </aside>
-    <main><header><div><small>MRP LITE V1 / ${active[1]}</small><h1>${active[1]}</h1></div><div class="header-actions"><span class="date">${new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date())}</span><button class="avatar">演</button></div></header><section class="content">${content}</section></main>
+    <main><header><div><small>LUFUTA 物料管理系统 LITE / ${active[1]}</small><h1>${active[1]}</h1></div><div class="header-actions"><span class="date">${new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date())}</span><button class="avatar">L</button></div></header><section class="content">${content}</section></main>
     <div id="modal-root"></div><div id="toast" class="toast"></div>
   </div>`;
 }
@@ -47,13 +47,12 @@ function statCard(label, value, hint, tone, ico) {
   return `<article class="stat-card"><div class="stat-icon ${tone}">${icon(ico, 22)}</div><div><span>${label}</span><strong>${value}</strong><small>${hint}</small></div></article>`;
 }
 
-function dashboard(results) {
-  const summary = getSummary(data, results);
-  const alerts = results.filter((r) => r.status !== '充足');
-  return `<div class="hero"><div><span class="eyebrow">TODAY'S OVERVIEW</span><h2>早上好，生产计划一目了然。</h2><p>根据当前模拟订单与库存，系统已完成 BOM 展开和缺料计算。</p></div><button class="primary" data-page="orders">运行订单模拟 ${icon('chart', 17)}</button></div>
-    <div class="stats-grid">${statCard('产品数量', summary.productCount, '已维护成品', 'blue', 'box')}${statCard('物料数量', summary.materialCount, '基础物料主数据', 'violet', 'layers')}${statCard('缺料物料', summary.shortageCount, summary.shortageCount ? '需要立即处理' : '当前无缺料', 'red', 'chart')}${statCard('库存低物料', summary.lowStockCount, '低于安全库存', 'amber', 'warehouse')}</div>
-    <div class="dashboard-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">需求风险</span><h3>物料预警</h3></div><button class="text-button" data-page="analysis">查看完整分析 →</button></div>${alerts.length ? `<div class="alert-list">${alerts.slice(0, 5).map((r) => { const isShortage = r.status === '缺料'; return `<div class="alert-row"><div class="material-avatar">${r.name[0]}</div><div class="grow"><strong>${r.name}</strong><small>${r.code} · 剩余 ${format(r.remainingQty)} ${r.unit}</small></div>${badge(r.status)}<div class="number ${isShortage ? 'danger' : 'warning'}"><small>${isShortage ? '缺口' : '剩余 / 安全'}</small><strong>${isShortage ? format(r.shortageQty) : `${format(r.remainingQty)} / ${format(r.safetyStock)}`}</strong></div></div>` }).join('')}</div>` : empty('没有库存预警', '所有需求物料均处于安全库存之上。')}</article>
-    <article class="panel"><div class="panel-head"><div><span class="kicker">模拟订单</span><h3>当前生产组合</h3></div></div><div class="order-bars">${data.orders.map((o, i) => { const p = data.products.find((x) => x.id === o.productId); const max = Math.max(...data.orders.map((x) => x.orderQty), 1); return `<div class="bar-item"><div><strong>${p.code}</strong><span>${o.orderQty} 台</span></div><div class="bar-track"><i style="width:${o.orderQty / max * 100}%;--delay:${i * 80}ms"></i></div><small>${p.model}</small></div>` }).join('')}</div><div class="total-line"><span>模拟订单总量</span><strong>${format(data.orders.reduce((s, o) => s + Number(o.orderQty), 0))} <small>台</small></strong></div></article></div>`;
+function dashboard() {
+  const lowStockCount = data.inventory.filter((row) => Number(row.stockQty) < Number(row.safetyStock)).length;
+  return `<div class="hero"><div><span class="eyebrow">PHASE 1 FOUNDATION</span><h2>Lufuta 物料管理系统 Lite</h2><p>统一管理物料资料、产品 BOM、库存台账与待审核业务入口。</p></div><span class="phase-chip">基础骨架 · 尚未连接后台</span></div>
+    <div class="stats-grid">${statCard('物料资料', data.materials.length, '当前原型记录', 'violet', 'layers')}${statCard('产品 / BOM', data.products.length, '产品基础资料', 'blue', 'box')}${statCard('库存风险', lowStockCount, '低于安全库存的台账项', 'amber', 'warehouse')}${statCard('待审核流水', 0, 'Phase 1 审核池占位', 'red', 'chart')}</div>
+    <div class="dashboard-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">MASTER DATA</span><h3>基础资料入口</h3></div></div><div class="entry-grid"><button class="entry-card" data-page="materials">${icon('layers', 22)}<span><strong>物料资料</strong><small>编码、名称、分类与单位</small></span></button><button class="entry-card" data-page="product-bom">${icon('git', 22)}<span><strong>产品 / BOM</strong><small>产品与物料组成关系</small></span></button><button class="entry-card" data-page="inventory">${icon('warehouse', 22)}<span><strong>库存台账</strong><small>只读查看当前库存骨架</small></span></button></div></article>
+    <article class="panel"><div class="panel-head"><div><span class="kicker">CONTROL POOL</span><h3>待审核与日常入口</h3></div><button class="text-button" data-page="audit">进入审核池 →</button></div><div class="flow-strip"><span>单据保存</span><b>→</b><span>待审核流水</span><b>→</b><span>审核后影响库存</span></div><div class="placeholder-copy"><strong>Phase 1 仅建立概念骨架</strong><p>完整表单、审批权限和库存过账将在后续阶段实现。</p></div></article></div>`;
 }
 
 function tablePage({ title, description, action, columns, rows }) {
@@ -75,7 +74,25 @@ function bomPage() {
 }
 
 function inventoryPage() {
-  return tablePage({ description: '维护现有库存、安全库存和采购提前期；修改后分析结果立即重算。', columns: ['物料', '当前库存', '安全库存', '可用水平', '提前期', '操作'], rows: data.materials.map((m) => { const inv = data.inventory.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0, leadTimeDays: 0 }; const ratio = inv.safetyStock ? inv.stockQty / inv.safetyStock : 9; return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td><span class="stock-level ${ratio < 1 ? 'bad' : ratio < 2 ? 'mid' : ''}"><i></i>${ratio < 1 ? '低于安全线' : ratio < 2 ? '接近安全线' : '正常'}</span></td><td>${inv.leadTimeDays} 天</td><td><button class="icon-btn" data-action="edit-inventory" data-id="${m.id}">${icon('edit', 16)}</button></td></tr>` }) });
+  return `${skeletonNotice('库存台账', 'Phase 1 仅提供台账查看骨架；库存余额不能在页面直接修改，未来由审核后的库存流水统一维护。')}${tablePage({ description: '查看物料当前库存、安全库存和基础风险状态。', columns: ['物料', '当前库存', '安全库存', '风险状态', '仓位 / 库位', '最后更新'], rows: data.materials.map((m) => { const inv = data.inventory.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">待补充</span></td><td><span class="muted">原型数据</span></td></tr>` }) })}`;
+}
+
+function productBomPage() {
+  const selected = sessionStorage.getItem('selectedProduct') || data.products[0]?.id;
+  const items = data.bom.filter((row) => row.productId === selected);
+  return `${skeletonNotice('产品 / BOM', 'Phase 1 展示产品与 BOM 基础关系；版本、损耗率和生效日期将在后续数据对象适配中补齐。')}<div class="product-tabs">${data.products.map((p) => `<button class="product-tab ${p.id === selected ? 'active' : ''}" data-product-tab="${p.id}"><small>${p.model}</small><strong>${p.code}</strong><span>${data.bom.filter((b) => b.productId === p.id).length} 项物料</span></button>`).join('')}</div><article class="panel table-panel"><div class="panel-head bom-title"><div><span class="kicker">PRODUCT / BOM SKELETON</span><h3>${productName(selected)} 物料组成</h3></div><span class="version">Phase 1</span></div><div class="table-wrap"><table><thead><tr><th>序号</th><th>物料编码</th><th>物料名称</th><th>分类</th><th>单台用量</th><th>单位</th><th>BOM 版本</th></tr></thead><tbody>${items.map((row, index) => { const material = data.materials.find((m) => m.id === row.materialId); return `<tr><td class="muted">${String(index + 1).padStart(2, '0')}</td><td><strong class="code">${material.code}</strong></td><td>${material.name}</td><td><span class="soft-tag">${material.category}</span></td><td><strong>${row.qtyPerProduct}</strong></td><td>${material.unit}</td><td><span class="muted">待适配</span></td></tr>`; }).join('')}</tbody></table></div></article>`;
+}
+
+function auditPage() {
+  return `${skeletonNotice('待审核流水 / 审核池', '保留朋友蓝图“先进入待审核流水、审核通过后才影响库存”的核心思想。本阶段不实现真实审批和库存过账。')}<article class="panel table-panel"><div class="panel-head"><div><span class="kicker">PENDING DOCUMENTS</span><h3>待审核业务记录</h3></div><span class="version">0 条 · 骨架</span></div><div class="table-wrap"><table><thead><tr><th>单据编号</th><th>单据类型</th><th>申请人</th><th>提交时间</th><th>库存影响</th><th>风险标记</th><th>审核状态</th></tr></thead><tbody><tr><td colspan="7"><div class="empty-table"><strong>暂无待审核记录</strong><p>Phase 1A 尚未实现单据保存和审核流程。</p></div></td></tr></tbody></table></div></article>`;
+}
+
+function documentPlaceholder(type, direction, description) {
+  return `${skeletonNotice(type, `Phase 1A 仅建立${type}入口，不提供完整单据填写、提交或审核功能。`)}<div class="document-shell"><article class="panel"><div class="panel-head"><div><span class="kicker">DOCUMENT ENTRY</span><h3>${type}单据骨架</h3></div><span class="version">未实现</span></div><div class="placeholder-form"><div><span>业务类型</span><strong>${type}</strong></div><div><span>库存方向</span><strong>${direction}</strong></div><div><span>当前说明</span><strong>${description}</strong></div></div></article><article class="panel workflow-panel"><span class="kicker">CONFIRMED BLUEPRINT RULE</span><h3>未来业务链路</h3><div class="workflow-steps"><span>填写单据</span><b>→</b><span>保存待审核</span><b>→</b><span>审核通过</span><b>→</b><span>${direction}</span></div><p>Phase 1A 不执行库存修改。</p></article></div>`;
+}
+
+function skeletonNotice(title, message) {
+  return `<div class="skeleton-notice"><div><span class="eyebrow">PHASE 1 SKELETON</span><strong>${title}</strong><p>${message}</p></div><span class="phase-chip">骨架页</span></div>`;
 }
 
 function ordersPage() {
@@ -91,9 +108,17 @@ function analysisPage(results) {
 function empty(title, desc) { return `<div class="empty"><div>✓</div><strong>${title}</strong><p>${desc}</p></div>`; }
 
 function render() {
-  const renderers = { dashboard, products: productsPage, materials: materialsPage, bom: bomPage, inventory: inventoryPage, orders: ordersPage, analysis: analysisPage };
-  const results = calculateMaterialRequirements(data);
-  document.querySelector('#app').innerHTML = appShell(renderers[currentPage](results), results);
+  const renderers = {
+    dashboard,
+    materials: () => `${skeletonNotice('物料资料', '当前复用旧 Demo 的基础列表作为 Phase 1 结构预览，完整字段和 service 分层尚未实现。')}${materialsPage()}`,
+    'product-bom': productBomPage,
+    inventory: inventoryPage,
+    audit: auditPage,
+    inbound: () => documentPlaceholder('入库', '审核通过后库存增加', '后续将承载供应商到货入库。'),
+    outbound: () => documentPlaceholder('领料', '审核通过后库存减少', '后续可从产品 BOM 带入领料需求。'),
+    'supplier-return': () => documentPlaceholder('供应商退货', '审核通过后库存减少', '这里指退回供应商，不是生产退料。'),
+  };
+  document.querySelector('#app').innerHTML = appShell(renderers[currentPage]());
   bindEvents();
 }
 
@@ -120,12 +145,12 @@ function updateOrder(productId, qty) {
 function handleAction(action, dataset) {
   if (action === 'analyze') return navigate('analysis');
   if (action === 'reset-data') {
-    if (!window.confirm('确定要重置所有演示数据吗？此操作将恢复初始产品、物料、BOM、库存和订单。')) return;
+    if (!window.confirm('确定要重置当前原型数据吗？')) return;
     resetStoredData();
     data = clone(initialData);
     sessionStorage.removeItem('selectedProduct');
     render();
-    return toast('演示数据已重置');
+    return toast('原型数据已重置');
   }
   if (action === 'add-product' || action === 'edit-product') return productModal(dataset.id);
   if (action === 'add-material' || action === 'edit-material') return materialModal(dataset.id);
@@ -135,7 +160,7 @@ function handleAction(action, dataset) {
 
 function showModal(title, body, onSubmit) {
   const root = document.querySelector('#modal-root');
-  root.innerHTML = `<div class="modal-backdrop"><form class="modal"><div class="modal-head"><div><span class="kicker">MRP LITE</span><h3>${title}</h3></div><button type="button" class="modal-close">×</button></div><div class="modal-body">${body}</div><div class="modal-actions"><button type="button" class="secondary modal-cancel">取消</button><button class="primary" type="submit">保存</button></div></form></div>`;
+  root.innerHTML = `<div class="modal-backdrop"><form class="modal"><div class="modal-head"><div><span class="kicker">LUFUTA LITE</span><h3>${title}</h3></div><button type="button" class="modal-close">×</button></div><div class="modal-body">${body}</div><div class="modal-actions"><button type="button" class="secondary modal-cancel">取消</button><button class="primary" type="submit">保存</button></div></form></div>`;
   const close = () => root.innerHTML = '';
   root.querySelector('.modal-close').onclick = close; root.querySelector('.modal-cancel').onclick = close; root.querySelector('.modal-backdrop').onclick = (e) => { if (e.target === e.currentTarget) close(); };
   root.querySelector('form').onsubmit = (e) => { e.preventDefault(); onSubmit(new FormData(e.target)); saveData(data); close(); render(); toast('保存成功，相关数据已更新'); };
