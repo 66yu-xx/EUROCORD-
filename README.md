@@ -33,8 +33,11 @@ npm test
 ## 当前代码结构
 
 - `src/app.js`：统一入口、Hash 导航和 Phase 1 页面骨架
+- `src/domain/models.js`：Phase 1 领域对象工厂与状态常量
+- `src/services/`：物料、产品/BOM、库存和审核池的 service 边界
 - `src/data.js`：当前前端原型数据，后续将迁移为新的领域数据对象
 - `src/storage.js`：当前简化存储适配器
+- `src/storage/snapshotRepository.js`：兼容当前完整快照的 repository 过渡层
 - `src/mrp.js`：从旧 Demo 保留的后期候选计算能力，不再主导当前 UI
 - `src/styles.css`：响应式页面样式
 - `tests/`：现有计算与 storage 回归测试

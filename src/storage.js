@@ -36,3 +36,11 @@ export function resetStoredData(storage = globalThis.localStorage) {
     return false;
   }
 }
+
+export function createStorageAdapter(storage = globalThis.localStorage) {
+  return Object.freeze({
+    load: (fallbackData) => loadData(fallbackData, storage),
+    save: (data) => saveData(data, storage),
+    reset: () => resetStoredData(storage),
+  });
+}
