@@ -1,6 +1,7 @@
 import { initialData } from './data.js';
 import { calculateMaterialRequirements, getInventoryStatusCounts, getSummary } from './mrp.js';
 import { formatProcurementLeadTimeDays, resolveProcurementLeadTimeDays } from './planning/procurementLeadTime.js';
+import { calculateProcurementRisk } from './planning/procurementRisk.js';
 import { createAuditService } from './services/auditService.js';
 import { createInventoryService } from './services/inventoryService.js';
 import { createMaterialService } from './services/materialService.js';
@@ -24,6 +25,13 @@ const deliveryRiskInputState = {
   asOfDate: '',
 };
 let deliveryRiskPreview = null;
+const DELIVERY_RISK_LABELS = { ok: '可满足', warning: '交期紧张', critical: '交期高风险', unknown: '无法判断' };
+const DELIVERY_RISK_REASONS = {
+  ok: '采购周期可满足期望交期',
+  warning: '采购周期接近期望交期，存在延期风险',
+  critical: '采购周期预计无法满足期望交期',
+  unknown: '采购周期未维护，无法判断交期风险',
+};
 
 const pages = [
   ['dashboard', '首页', 'grid'], ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'],
@@ -108,14 +116,14 @@ function inventoryPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>当前为只读分析入口，本步骤仅显示 BOM 需求、库存缺口与采购周期；尚未接入真实交期风险判断。</p></div><span class="phase-chip">采购周期预览</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>当前为只读分析入口，本步骤显示 BOM 需求、库存缺口、采购周期与交期风险预览。</p></div><span class="phase-chip">风险等级预览</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
 }
 
 function deliveryRiskPreviewPanel() {
   if (!deliveryRiskPreview) return '';
   const { product, plannedQty, rows } = deliveryRiskPreview;
   if (!rows.length) return `<article class="panel table-panel" data-delivery-risk-preview><div class="panel-head"><div><span class="kicker">BOM REQUIREMENT PREVIEW</span><h3>BOM 需求预览</h3></div><span class="version">${product.code} · 只读预览</span></div><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成需求预览</strong><p>请选择其他产品，或在后续阶段维护该产品的 BOM 数据。</p></div></article>`;
-  return `<article class="panel table-panel" data-delivery-risk-preview><div class="panel-head"><div><span class="kicker">PROCUREMENT LEAD TIME PREVIEW</span><h3>BOM、库存与采购周期预览</h3></div><span class="version">${product.code} · ${rows.length} 项物料</span></div><div class="table-wrap"><table><thead><tr><th>物料编码</th><th>物料名称</th><th>单位用量</th><th>计划数量</th><th>总需求</th><th>当前库存</th><th>缺口数量</th><th>库存判断</th><th>采购周期</th></tr></thead><tbody>${rows.map((row) => `<tr><td><strong class="code">${row.material.code}</strong></td><td>${row.material.name}</td><td>${format(row.qtyPerProduct)} ${row.material.unit}</td><td>${format(plannedQty)}</td><td><strong>${format(row.requiredQty)}</strong> ${row.material.unit}</td><td>${format(row.stockQty)} ${row.material.unit}</td><td><strong class="${row.shortageQty > 0 ? 'danger-text' : 'muted'}">${format(row.shortageQty)}</strong> ${row.material.unit}</td><td><span class="stock-level ${row.shortageQty > 0 ? 'bad' : ''}"><i></i>${row.shortageQty > 0 ? '库存不足' : '库存可覆盖'}</span></td><td>${formatProcurementLeadTimeDays(row.procurementLeadTimeDays)}</td></tr>`).join('')}</tbody></table></div></article>`;
+  return `<article class="panel table-panel" data-delivery-risk-preview><div class="panel-head"><div><span class="kicker">DELIVERY RISK PREVIEW</span><h3>物料交期风险预览</h3></div><span class="version">${product.code} · ${rows.length} 项物料</span></div><div class="table-wrap"><table><thead><tr><th>物料编码</th><th>物料名称</th><th>单位用量</th><th>计划数量</th><th>总需求</th><th>当前库存</th><th>缺口数量</th><th>库存判断</th><th>采购周期</th><th>交期风险</th><th>风险说明</th></tr></thead><tbody>${rows.map((row) => `<tr><td><strong class="code">${row.material.code}</strong></td><td>${row.material.name}</td><td>${format(row.qtyPerProduct)} ${row.material.unit}</td><td>${format(plannedQty)}</td><td><strong>${format(row.requiredQty)}</strong> ${row.material.unit}</td><td>${format(row.stockQty)} ${row.material.unit}</td><td><strong class="${row.shortageQty > 0 ? 'danger-text' : 'muted'}">${format(row.shortageQty)}</strong> ${row.material.unit}</td><td><span class="stock-level ${row.shortageQty > 0 ? 'bad' : ''}"><i></i>${row.shortageQty > 0 ? '库存不足' : '库存可覆盖'}</span></td><td>${formatProcurementLeadTimeDays(row.procurementLeadTimeDays)}</td><td><span class="soft-tag">${row.deliveryRiskLabel}</span></td><td>${row.deliveryRiskReason}</td></tr>`).join('')}</tbody></table></div></article>`;
 }
 
 function productBomPage() {
@@ -224,10 +232,22 @@ function handleAction(action, dataset) {
         stockQty: Number(inventoryBalance?.stockQty ?? 0),
         procurementLeadTimeDays: resolveProcurementLeadTimeDays(material, inventoryBalance),
       };
-    }).filter((row) => row.material).map((row) => ({ ...row, shortageQty: Math.max(row.requiredQty - row.stockQty, 0) }));
+    }).filter((row) => row.material).map((row) => {
+      const shortageQty = Math.max(row.requiredQty - row.stockQty, 0);
+      if (shortageQty === 0) return { ...row, shortageQty, deliveryRiskLabel: '可满足', deliveryRiskReason: '库存可覆盖本次需求' };
+      const risk = calculateProcurementRisk({
+        requiredQty: row.requiredQty,
+        stockQty: row.stockQty,
+        safetyStock: 0,
+        procurementLeadTimeDays: row.procurementLeadTimeDays,
+        requiredDate: deliveryRiskInputState.requiredDate,
+        asOfDate: deliveryRiskInputState.asOfDate,
+      });
+      return { ...row, shortageQty, deliveryRiskLabel: DELIVERY_RISK_LABELS[risk.riskLevel], deliveryRiskReason: DELIVERY_RISK_REASONS[risk.riskLevel] };
+    });
     deliveryRiskPreview = { product, plannedQty, rows };
     render();
-    return toast(rows.length ? '采购周期预览已生成；真实交期风险判断将在后续步骤接入' : '当前产品尚未维护 BOM，无法生成需求预览');
+    return toast(rows.length ? '交期风险等级预览已生成' : '当前产品尚未维护 BOM，无法生成需求预览');
   }
   if (action === 'analyze') return navigate('analysis');
   if (action === 'reset-data') {
