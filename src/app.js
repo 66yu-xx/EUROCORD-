@@ -99,7 +99,9 @@ function inventoryPage() {
 }
 
 function deliveryRiskPage() {
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>基于计划需求、BOM、库存与采购周期判断物料交期风险。当前页面为只读分析入口，尚未接入真实计算。</p></div><span class="phase-chip">只读骨架</span></div><article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
+  const products = productService.listProducts();
+  const productOptions = products.map((product) => `<option value="${product.id}">${product.code} · ${product.name}</option>`).join('');
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>基于计划需求、BOM、库存与采购周期判断物料交期风险。当前为只读分析入口，尚未接入真实 BOM、库存与采购周期计算。</p></div><span class="phase-chip">输入骨架</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="productId">${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form><article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
 }
 
 function productBomPage() {
@@ -184,6 +186,7 @@ function updateOrder(productId, qty) {
 }
 
 function handleAction(action, dataset) {
+  if (action === 'delivery-risk-placeholder') return toast('交期风险计算将在后续步骤接入');
   if (action === 'analyze') return navigate('analysis');
   if (action === 'reset-data') {
     if (!window.confirm('确定要重置当前原型数据吗？')) return;
