@@ -20,7 +20,7 @@ let toastTimer;
 
 const pages = [
   ['dashboard', '首页', 'grid'], ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'],
-  ['inventory', '库存台账', 'warehouse'], ['audit', '待审核流水', 'chart'], ['inbound', '入库', 'box'],
+  ['inventory', '库存台账', 'warehouse'], ['delivery-risk', '交期风险分析', 'chart'], ['audit', '待审核流水', 'chart'], ['inbound', '入库', 'box'],
   ['outbound', '领料', 'cart'], ['supplier-return', '供应商退货', 'warehouse'],
 ];
 
@@ -98,6 +98,10 @@ function inventoryPage() {
   return `${skeletonNotice('库存台账', '当前只读展示 Lite 阶段的演示库存，用于安全库存与缺料风险判断。采购周期来自物料主数据，旧演示库存字段仅作兼容回退。这里不是真实库存账，本阶段不提供入库、出库、冻结、盘点、过账、批次或库位管理。')}${tablePage({ description: '库存数量来自浏览器中的演示数据，不会生成库存单据。', columns: ['物料', '当前库存', '安全库存', '采购周期', '风险状态', '仓位 / 库位', '最后更新'], rows: materials.map((m) => { const inv = balances.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); const leadTimeDays = resolveProcurementLeadTimeDays(m, inv); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td>${formatProcurementLeadTimeDays(leadTimeDays)}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">未启用</span></td><td><span class="muted">演示数据</span></td></tr>` }) })}`;
 }
 
+function deliveryRiskPage() {
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>基于计划需求、BOM、库存与采购周期判断物料交期风险。当前页面为只读分析入口，尚未接入真实计算。</p></div><span class="phase-chip">只读骨架</span></div><article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
+}
+
 function productBomPage() {
   const products = productService.listProducts();
   const materials = materialService.listMaterials();
@@ -149,6 +153,7 @@ function render() {
     materials: () => `${skeletonNotice('物料资料', '当前只读展示 Lite 阶段的物料编码、名称、分类、单位与采购周期。采购周期属于物料主数据，用于后续交期风险和采购时点分析。本阶段不提供维护表单，也不代表供应商报价、采购合同、财务成本或 ERP 正式主数据。')}${materialsPage()}`,
     'product-bom': productBomPage,
     inventory: inventoryPage,
+    'delivery-risk': deliveryRiskPage,
     audit: auditPage,
     inbound: () => documentPlaceholder('入库', '审核通过后库存增加', '后续将承载供应商到货入库。'),
     outbound: () => documentPlaceholder('领料', '审核通过后库存减少', '后续可从产品 BOM 带入领料需求。'),
