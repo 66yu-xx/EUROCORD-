@@ -7,3 +7,7 @@ export function resolveProcurementLeadTimeDays(material = {}, inventoryBalance =
 
   return null;
 }
+
+export function formatProcurementLeadTimeDays(value) {
+  return value === null || value === undefined ? '未维护' : `${value} 天`;
+}

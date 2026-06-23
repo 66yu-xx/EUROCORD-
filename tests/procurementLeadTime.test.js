@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialData } from '../src/data.js';
-import { resolveProcurementLeadTimeDays } from '../src/planning/procurementLeadTime.js';
+import { formatProcurementLeadTimeDays, resolveProcurementLeadTimeDays } from '../src/planning/procurementLeadTime.js';
 
 test('material procurement lead time takes precedence over the legacy inventory value', () => {
   assert.equal(resolveProcurementLeadTimeDays(
@@ -32,4 +32,17 @@ test('demo data carries the material field while retaining the legacy inventory 
     const inventoryBalance = initialData.inventory.find((item) => item.materialId === material.id);
     assert.equal(material.procurementLeadTimeDays, inventoryBalance.leadTimeDays);
   }
+});
+
+test('missing procurement lead time is formatted as unmaintained', () => {
+  assert.equal(formatProcurementLeadTimeDays(null), '未维护');
+  assert.equal(formatProcurementLeadTimeDays(undefined), '未维护');
+});
+
+test('zero-day procurement lead time remains visible', () => {
+  assert.equal(formatProcurementLeadTimeDays(0), '0 天');
+});
+
+test('maintained procurement lead time is formatted in days', () => {
+  assert.equal(formatProcurementLeadTimeDays(12), '12 天');
 });
