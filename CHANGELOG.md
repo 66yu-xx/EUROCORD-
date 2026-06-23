@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-06-23 — Phase 1E Page Structure Acceptance
+
+- Phase 1D 页面业务边界说明已完成、提交并 push，基线 commit 为 `bff0f40 clarify phase 1 page business boundaries`。
+- Phase 1E 进入页面结构验收与封版整理，核对导航、页面定位、历史页面函数和项目文档状态。
+- 当前导航保持首页、物料资料、产品 / BOM、库存台账、待审核流水、入库、领料和供应商退货，不恢复旧业务路线。
+- `productsPage`、`bomPage`、`ordersPage`、`analysisPage` 等历史 renderer 保留为后续范围评估参考，Phase 1E 不接入导航。
+- 本阶段不开发新业务能力，不实现真实审核、库存过账、单据保存、采购计划、API 或数据库。
+- 当前测试基线保持 17/17 通过。
+
 ## 2026-06-22 — Phase 1 Scope Definition
 
 - 新增 `PHASE_1_SCOPE.md`，根据蓝图关系审计定义 Phase 1 的目标、范围和实施顺序。

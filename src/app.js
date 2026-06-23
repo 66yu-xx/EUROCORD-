@@ -73,6 +73,8 @@ function tablePage({ title, description, action, columns, rows }) {
   return `<div class="page-intro"><div><p>${description}</p></div>${action || ''}</div><article class="panel table-panel"><div class="table-meta"><span>共 <strong>${rows.length}</strong> 条记录</span><div class="search">⌕ <input placeholder="在当前列表中筛选…" data-table-search /></div></div><div class="table-wrap"><table><thead><tr>${columns.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div></article>`;
 }
 
+// Legacy page renderers retained for later scope review. They are intentionally absent from
+// the Phase 1 navigation and renderer map; do not reconnect them during Phase 1E.
 function productsPage() {
   return `${skeletonNotice('产品资料', '用于维护 Lite 阶段的产品编码、名称与规格，供 BOM 和缺料计算验证使用。当前不包含产品审批、版本冻结、生命周期管理或客户订单绑定。')}${tablePage({ description: '当前记录保存在浏览器中，仅用于业务演示与结构验证。', action: `<button class="primary" data-action="add-product">${icon('plus', 17)} 新增产品</button>`, columns: ['产品编码', '产品名称', '规格型号', 'BOM 物料数', '操作'], rows: data.products.map((p) => `<tr><td><strong class="code">${p.code}</strong></td><td>${p.name}</td><td><span class="soft-tag">${p.model}</span></td><td>${new Set(data.bom.filter((b) => b.productId === p.id).map((b) => b.materialId)).size} 项</td><td><button class="icon-btn" title="编辑" data-action="edit-product" data-id="${p.id}">${icon('edit', 16)}</button></td></tr>`) })}`;
 }
@@ -126,6 +128,8 @@ function skeletonNotice(title, message) {
   return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 1</span><strong>${title}</strong><p>${message}</p></div><span class="phase-chip">演示与验证</span></div>`;
 }
 
+// Legacy MRP Lite simulation pages remain as technical reference only. Their future use must
+// be decided by the Lufuta roadmap instead of restoring the old business route by default.
 function ordersPage() {
   const total = data.orders.reduce((s, o) => s + Number(o.orderQty || 0), 0);
   return `${skeletonNotice('订单模拟 / 缺料分析', '输入产品数量后，系统按“订单数量 → BOM 用量 → 库存扣减 → 状态判断”模拟物料需求。结果仅供 Lite 阶段辅助判断，不等同于正式生产计划、采购建议或交期承诺，也不会生成采购单、生产单、销售订单或库存单据。')}<div class="split-layout"><div><div class="page-intro"><p>输入本次模拟数量，系统将展开产品 BOM 并汇总物料需求。</p></div><article class="panel order-form"><div class="panel-head"><div><span class="kicker">ORDER SIMULATION</span><h3>本次模拟订单</h3></div><span class="draft">演示数据</span></div><div class="order-lines">${data.products.map((p) => { const order = data.orders.find((o) => o.productId === p.id); return `<label class="order-line"><div class="product-badge">${p.code.slice(-1)}</div><div class="grow"><strong>${p.code}</strong><small>${p.name} · ${p.model}</small></div><div class="qty-control"><button type="button" data-step="-10" data-id="${p.id}">−</button><input type="number" min="0" step="1" value="${order?.orderQty || 0}" data-order="${p.id}"/><button type="button" data-step="10" data-id="${p.id}">＋</button></div><span>台</span></label>` }).join('')}</div><div class="order-footer"><div><span>模拟数量合计</span><strong id="order-total">${format(total)} 台</strong></div><button class="primary large" data-action="analyze">查看缺料分析 ${icon('chart', 18)}</button></div></article></div><aside class="logic-card"><span class="kicker">CALCULATION LOGIC</span><h3>系统如何计算？</h3><div class="logic-step"><b>01</b><div><strong>读取模拟数量</strong><p>汇总各产品计划生产台数</p></div></div><div class="logic-step"><b>02</b><div><strong>展开 BOM</strong><p>模拟数量 × 每台物料用量</p></div></div><div class="logic-step"><b>03</b><div><strong>合并物料需求</strong><p>同一物料跨产品自动加总</p></div></div><div class="logic-step"><b>04</b><div><strong>库存与安全线判断</strong><p>生成充足、库存低、缺料状态</p></div></div><div class="formula">总需求 = Σ (模拟数量 × 单台用量)</div></aside></div>`;
@@ -190,6 +194,8 @@ function handleAction(action, dataset) {
   if (action === 'edit-inventory') return inventoryModal(dataset.id);
 }
 
+// These edit-modal helpers belong to the retained legacy pages above. Current Phase 1 pages
+// are read-only or placeholders, so the helpers are not part of the accepted navigation flow.
 function showModal(title, body, onSubmit) {
   const root = document.querySelector('#modal-root');
   root.innerHTML = `<div class="modal-backdrop"><form class="modal"><div class="modal-head"><div><span class="kicker">LUFUTA LITE</span><h3>${title}</h3></div><button type="button" class="modal-close">×</button></div><div class="modal-body">${body}</div><div class="modal-actions"><button type="button" class="secondary modal-cancel">取消</button><button class="primary" type="submit">保存</button></div></form></div>`;
