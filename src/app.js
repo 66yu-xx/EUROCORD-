@@ -83,7 +83,7 @@ function productsPage() {
 function materialsPage() {
   const materials = materialService.listMaterials();
   const bomItems = productService.listBOMItems();
-  return tablePage({ description: '只读查看当前 Lite 物料资料及其 BOM 引用关系。', columns: ['物料编码', '物料名称', '分类', '单位', '引用 BOM', '当前阶段'], rows: materials.map((m) => `<tr><td><strong class="code">${m.code}</strong></td><td>${m.name}</td><td><span class="soft-tag">${m.category}</span></td><td>${m.unit}</td><td>${bomItems.filter((b) => b.materialId === m.id).length} 个产品</td><td><span class="muted">只读</span></td></tr>`) });
+  return tablePage({ description: '只读查看当前 Lite 物料资料及其 BOM 引用关系。', columns: ['物料编码', '物料名称', '分类', '单位', '采购周期', '引用 BOM', '当前阶段'], rows: materials.map((m) => `<tr><td><strong class="code">${m.code}</strong></td><td>${m.name}</td><td><span class="soft-tag">${m.category}</span></td><td>${m.unit}</td><td>${formatProcurementLeadTimeDays(m.procurementLeadTimeDays)}</td><td>${bomItems.filter((b) => b.materialId === m.id).length} 个产品</td><td><span class="muted">只读</span></td></tr>`) });
 }
 
 function bomPage() {
@@ -146,7 +146,7 @@ function empty(title, desc) { return `<div class="empty"><div>✓</div><strong>$
 function render() {
   const renderers = {
     dashboard,
-    materials: () => `${skeletonNotice('物料资料', '当前只读展示 Lite 阶段的物料编码、名称、分类与单位，供 BOM 关系和后续计算验证使用。本阶段不提供维护表单，也不代表供应商报价、采购合同、财务成本或 ERP 正式主数据。')}${materialsPage()}`,
+    materials: () => `${skeletonNotice('物料资料', '当前只读展示 Lite 阶段的物料编码、名称、分类、单位与采购周期。采购周期属于物料主数据，用于后续交期风险和采购时点分析。本阶段不提供维护表单，也不代表供应商报价、采购合同、财务成本或 ERP 正式主数据。')}${materialsPage()}`,
     'product-bom': productBomPage,
     inventory: inventoryPage,
     audit: auditPage,
