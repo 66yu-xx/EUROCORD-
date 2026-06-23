@@ -23,6 +23,7 @@ const deliveryRiskInputState = {
   requiredDate: '',
   asOfDate: '',
 };
+let deliveryRiskPreview = null;
 
 const pages = [
   ['dashboard', '首页', 'grid'], ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'],
@@ -107,7 +108,14 @@ function inventoryPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>基于计划需求、BOM、库存与采购周期判断物料交期风险。当前为只读分析入口，尚未接入真实 BOM、库存与采购周期计算。</p></div><span class="phase-chip">输入骨架</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form><article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>当前为只读分析入口，本步骤仅显示 BOM 需求预览；尚未接入库存、采购周期与真实交期风险判断。</p></div><span class="phase-chip">BOM 预览</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
+}
+
+function deliveryRiskPreviewPanel() {
+  if (!deliveryRiskPreview) return '';
+  const { product, plannedQty, rows } = deliveryRiskPreview;
+  if (!rows.length) return `<article class="panel table-panel" data-delivery-risk-preview><div class="panel-head"><div><span class="kicker">BOM REQUIREMENT PREVIEW</span><h3>BOM 需求预览</h3></div><span class="version">${product.code} · 只读预览</span></div><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成需求预览</strong><p>请选择其他产品，或在后续阶段维护该产品的 BOM 数据。</p></div></article>`;
+  return `<article class="panel table-panel" data-delivery-risk-preview><div class="panel-head"><div><span class="kicker">BOM REQUIREMENT PREVIEW</span><h3>BOM 需求预览</h3></div><span class="version">${product.code} · ${rows.length} 项物料</span></div><div class="table-wrap"><table><thead><tr><th>物料编码</th><th>物料名称</th><th>单位用量</th><th>计划数量</th><th>总需求</th></tr></thead><tbody>${rows.map((row) => `<tr><td><strong class="code">${row.material.code}</strong></td><td>${row.material.name}</td><td>${format(row.qtyPerProduct)} ${row.material.unit}</td><td>${format(plannedQty)}</td><td><strong>${format(row.requiredQty)}</strong> ${row.material.unit}</td></tr>`).join('')}</tbody></table></div></article>`;
 }
 
 function productBomPage() {
@@ -176,7 +184,11 @@ function navigate(page) { currentPage = page; history.replaceState(null, '', `#$
 function bindEvents() {
   document.querySelectorAll('[data-page]').forEach((el) => el.addEventListener('click', () => navigate(el.dataset.page)));
   document.querySelectorAll('[data-product-tab]').forEach((el) => el.addEventListener('click', () => { sessionStorage.setItem('selectedProduct', el.dataset.productTab); render(); }));
-  document.querySelectorAll('[data-delivery-risk-input]').forEach((input) => input.addEventListener('input', () => { deliveryRiskInputState[input.name] = input.value; }));
+  document.querySelectorAll('[data-delivery-risk-input]').forEach((input) => input.addEventListener('input', () => {
+    deliveryRiskInputState[input.name] = input.value;
+    deliveryRiskPreview = null;
+    document.querySelector('[data-delivery-risk-preview]')?.remove();
+  }));
   document.querySelectorAll('[data-order]').forEach((input) => input.addEventListener('input', () => updateOrder(input.dataset.order, input.value)));
   document.querySelectorAll('[data-step]').forEach((btn) => btn.addEventListener('click', () => { const input = document.querySelector(`[data-order="${btn.dataset.id}"]`); input.value = Math.max(0, Number(input.value) + Number(btn.dataset.step)); updateOrder(btn.dataset.id, input.value); }));
   document.querySelectorAll('[data-action]').forEach((el) => el.addEventListener('click', () => handleAction(el.dataset.action, el.dataset)));
@@ -199,7 +211,16 @@ function handleAction(action, dataset) {
     if (!deliveryRiskInputState.plannedQty || Number(deliveryRiskInputState.plannedQty) <= 0) return toast('请输入有效计划数量');
     if (!deliveryRiskInputState.requiredDate) return toast('请选择期望交期');
     if (!deliveryRiskInputState.asOfDate) return toast('请选择分析日期');
-    return toast(`${product.code} · ${product.name}，计划数量 ${deliveryRiskInputState.plannedQty}，期望交期 ${deliveryRiskInputState.requiredDate}，分析日期 ${deliveryRiskInputState.asOfDate}。BOM、库存与采购周期计算将在后续步骤接入`);
+    const plannedQty = Number(deliveryRiskInputState.plannedQty);
+    const materials = materialService.listMaterials();
+    const rows = productService.listBOMItems(product.id).map((item) => ({
+      material: materials.find((material) => material.id === item.materialId),
+      qtyPerProduct: Number(item.qtyPerProduct),
+      requiredQty: Number(item.qtyPerProduct) * plannedQty,
+    })).filter((row) => row.material);
+    deliveryRiskPreview = { product, plannedQty, rows };
+    render();
+    return toast(rows.length ? 'BOM 需求预览已生成；库存、采购周期与交期风险判断将在后续步骤接入' : '当前产品尚未维护 BOM，无法生成需求预览');
   }
   if (action === 'analyze') return navigate('analysis');
   if (action === 'reset-data') {
