@@ -29,6 +29,7 @@ export function createMaterial(values = {}) {
     defaultLocation: '',
     minStock: 0,
     maxStock: 0,
+    procurementLeadTimeDays: null,
     status: 'active',
     notes: '',
     createdAt: null,

@@ -31,3 +31,11 @@ test('domain factories apply overrides without sharing array defaults', () => {
   assert.deepEqual(second.riskFlags, []);
   assert.equal(first.documentNo, 'DOC-001');
 });
+
+test('material draft marks an unmaintained procurement lead time as null', () => {
+  assert.equal(createMaterial().procurementLeadTimeDays, null);
+});
+
+test('material draft preserves a supplied procurement lead time', () => {
+  assert.equal(createMaterial({ procurementLeadTimeDays: 14 }).procurementLeadTimeDays, 14);
+});
