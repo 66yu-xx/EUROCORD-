@@ -1,6 +1,7 @@
 import { initialData } from './data.js';
 import { calculateMaterialRequirements, getInventoryStatusCounts, getSummary } from './mrp.js';
 import { formatProcurementLeadTimeDays, resolveProcurementLeadTimeDays } from './planning/procurementLeadTime.js';
+import { buildProcurementRecommendation } from './planning/procurementRecommendation.js';
 import { calculateProcurementRisk } from './planning/procurementRisk.js';
 import { createAuditService } from './services/auditService.js';
 import { createInventoryService } from './services/inventoryService.js';
@@ -232,20 +233,31 @@ function handleAction(action, dataset) {
         qtyPerProduct: Number(item.qtyPerProduct),
         requiredQty: Number(item.qtyPerProduct) * plannedQty,
         stockQty: Number(inventoryBalance?.stockQty ?? 0),
+        safetyStock: Number(inventoryBalance?.safetyStock ?? 0),
         procurementLeadTimeDays: resolveProcurementLeadTimeDays(material, inventoryBalance),
       };
     }).filter((row) => row.material).map((row) => {
-      const shortageQty = Math.max(row.requiredQty - row.stockQty, 0);
-      if (shortageQty === 0) return { ...row, shortageQty, deliveryRiskLabel: '可满足', deliveryRiskReason: '库存可覆盖本次需求' };
       const risk = calculateProcurementRisk({
         requiredQty: row.requiredQty,
         stockQty: row.stockQty,
-        safetyStock: 0,
+        safetyStock: row.safetyStock,
         procurementLeadTimeDays: row.procurementLeadTimeDays,
         requiredDate: deliveryRiskInputState.requiredDate,
         asOfDate: deliveryRiskInputState.asOfDate,
       });
-      return { ...row, shortageQty, deliveryRiskLabel: DELIVERY_RISK_LABELS[risk.riskLevel], deliveryRiskReason: DELIVERY_RISK_REASONS[risk.riskLevel] };
+      const resultRow = {
+        ...row,
+        shortageQty: risk.shortageQty,
+        remainingQty: risk.remainingQty,
+        riskLevel: risk.riskLevel,
+        quantityRisk: risk.quantityRisk,
+        mustOrderNow: risk.mustOrderNow,
+        latestOrderDate: risk.latestOrderDate,
+        expectedArrivalDate: risk.expectedArrivalDate,
+        deliveryRiskLabel: risk.shortageQty === 0 ? '可满足' : DELIVERY_RISK_LABELS[risk.riskLevel],
+        deliveryRiskReason: risk.shortageQty === 0 ? '库存可覆盖本次需求' : DELIVERY_RISK_REASONS[risk.riskLevel],
+      };
+      return { ...resultRow, recommendation: buildProcurementRecommendation(resultRow) };
     });
     deliveryRiskPreview = { product, plannedQty, requiredDate: deliveryRiskInputState.requiredDate, asOfDate: deliveryRiskInputState.asOfDate, rows };
     render();
