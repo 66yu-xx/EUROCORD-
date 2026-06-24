@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-06-24 — V3 / Phase 2B Freeze
+
+- 完成采购建议规则与数据结构审查，并新增只读采购建议纯计算规则。
+- 将 `recommendation` 接入 `deliveryRiskPreview.rows`，建议仅作为页面运行期临时结果存在。
+- 在交期风险分析结果下方新增“采购建议视图（只读）”，展示建议动作、数量、原因、优先级、采购周期和风险等级。
+- 采购建议基于当前计划数量、BOM、库存、安全库存和采购周期自动生成，仅供采购判断参考，实际采购仍需人工确认。
+- 明确系统不生成采购单、不保存采购建议或正式订单、不修改或占用库存，也不进入库存过账。
+- Phase 2B 最新已提交基线为 `3555dbf clarify read-only procurement recommendation boundaries`，冻结测试基线为 47/47 通过。
+- 本步骤只更新项目文档，不修改业务代码或测试，不进入 Phase 2C 或下一阶段。
+
 ## 2026-06-24 — V3 / Phase 2A Freeze
 
 - V3 / Phase 2A-Step 13 已完成并提交，基线 commit 为 `e91e33c polish delivery risk analysis results`。
