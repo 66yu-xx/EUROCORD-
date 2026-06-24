@@ -117,7 +117,63 @@ function inventoryPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>当前为 Phase 2A 只读分析入口，用于查看 BOM 需求、库存缺口、采购周期与交期风险预览；不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">风险等级预览</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>当前为 Phase 2A 只读分析入口，用于查看 BOM 需求、库存缺口、采购周期与交期风险预览；不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">风险等级预览</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
+}
+
+function orderDecisionSummaryPanel() {
+  const rows = deliveryRiskPreview?.rows;
+  let decision = {
+    judgment: '等待分析',
+    riskLevel: '待生成',
+    reason: '尚未生成交期风险分析结果',
+    action: '请先完成分析条件并生成结果',
+  };
+
+  if (rows?.length === 0) {
+    decision = {
+      judgment: '当前订单暂无法判断',
+      riskLevel: '无法判断',
+      reason: '当前产品尚未维护 BOM，缺少物料需求依据',
+      action: '建议先确认产品 BOM 后再判断交期',
+    };
+  } else if (rows?.length) {
+    const criticalRow = rows.find((row) => row.riskLevel === 'critical');
+    const unknownRow = rows.find((row) => row.riskLevel === 'unknown' && row.recommendation.recommendedQty > 0);
+    const warningRow = rows.find((row) => row.riskLevel === 'warning');
+
+    if (criticalRow) {
+      decision = {
+        judgment: '当前订单交期风险较高',
+        riskLevel: criticalRow.deliveryRiskLabel,
+        reason: '部分缺料物料的采购周期超过剩余交期',
+        action: '建议先确认关键缺料物料后再承诺交期',
+      };
+    } else if (unknownRow) {
+      decision = {
+        judgment: '当前订单交期风险暂无法判断',
+        riskLevel: DELIVERY_RISK_LABELS.unknown,
+        reason: '部分需采购物料的采购周期未维护',
+        action: '建议先确认采购周期和关键物料后再承诺交期',
+      };
+    } else if (warningRow) {
+      const hasShortage = rows.some((row) => row.shortageQty > 0);
+      decision = {
+        judgment: '当前订单存在交期风险',
+        riskLevel: DELIVERY_RISK_LABELS.warning,
+        reason: hasShortage ? '部分物料存在缺料，但采购周期仍可能满足期望交期' : '生产后部分物料库存将低于安全库存',
+        action: hasShortage ? '建议采购提前确认，不建议等待下一次订单合并' : '可继续下单，但建议关注安全库存补充',
+      };
+    } else {
+      decision = {
+        judgment: '当前订单交期风险较低',
+        riskLevel: DELIVERY_RISK_LABELS.ok,
+        reason: '当前库存基本可覆盖订单需求',
+        action: '可继续下单，但建议关注库存变化',
+      };
+    }
+  }
+
+  return `<article class="panel" data-order-decision-summary style="margin:18px 0"><div class="panel-head"><div><span class="kicker">ORDER DECISION / PHASE 2C</span><h3>订单决策摘要</h3></div><span class="version">只读判断</span></div><div class="placeholder-form"><div><span>当前判断</span><strong>${decision.judgment}</strong></div><div><span>风险等级</span><strong>${decision.riskLevel}</strong></div><div><span>主要原因</span><strong>${decision.reason}</strong></div><div><span>建议动作</span><strong>${decision.action}</strong></div></div></article>`;
 }
 
 function deliveryRiskPreviewPanel() {
@@ -200,6 +256,10 @@ function bindEvents() {
     deliveryRiskInputState[input.name] = input.value;
     deliveryRiskPreview = null;
     document.querySelector('[data-delivery-risk-preview]')?.remove();
+    document.querySelector('[data-procurement-recommendation-view]')?.remove();
+    document.querySelector('[data-delivery-risk-legend]')?.remove();
+    const decisionSummary = document.querySelector('[data-order-decision-summary]');
+    if (decisionSummary) decisionSummary.outerHTML = orderDecisionSummaryPanel();
   }));
   document.querySelectorAll('[data-order]').forEach((input) => input.addEventListener('input', () => updateOrder(input.dataset.order, input.value)));
   document.querySelectorAll('[data-step]').forEach((btn) => btn.addEventListener('click', () => { const input = document.querySelector(`[data-order="${btn.dataset.id}"]`); input.value = Math.max(0, Number(input.value) + Number(btn.dataset.step)); updateOrder(btn.dataset.id, input.value); }));
