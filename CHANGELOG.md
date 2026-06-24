@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-06-24 — V3 / Phase 2A Freeze
+
+- V3 / Phase 2A-Step 13 已完成并提交，基线 commit 为 `e91e33c polish delivery risk analysis results`。
+- 交期风险分析页面已形成只读闭环：产品选择 → 计划数量 → `requiredDate` → `asOfDate` → BOM 需求 → 库存缺口 → 采购周期 → 交期风险等级 → 分析摘要与说明。
+- 已完成根据产品 BOM 计算计划需求、根据库存判断缺口、根据物料采购周期判断交期风险，以及风险等级、分析条件摘要和风险等级说明的展示。
+- 原有表格字段和风险结果保持不变。
+- 页面不保存正式订单、不生成采购单、不修改或过账库存、不连接 API / 数据库，也不做 Dashboard 汇总。
+- Phase 2A 的功能、提交、远端同步和测试基线均已稳定；冻结测试基线为 40/40 通过。
+- 本步骤只更新项目文档，不修改业务代码或测试，不进入 Phase 2B。
+
 ## 2026-06-23 — Phase 1E Page Structure Acceptance
 
 - Phase 1D 页面业务边界说明已完成、提交并 push，基线 commit 为 `bff0f40 clarify phase 1 page business boundaries`。

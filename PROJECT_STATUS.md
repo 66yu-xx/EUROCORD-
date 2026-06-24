@@ -3,37 +3,56 @@
 ## 当前状态
 
 - 项目：`Lufuta Material Management System Lite`
-- 当前阶段：Phase 1E — 页面结构验收与封版整理
+- 当前阶段：V3 / Phase 2A-Step 14 — 文档更新与阶段冻结
 - 当前分支：`lufuta-material-system-lite`
-- 当前最新已提交基线：`bff0f40 clarify phase 1 page business boundaries`
-- 当前测试基线：17/17 通过
-- 当前目标：验收 Phase 1 页面结构、导航状态、历史页面函数和文档状态，为 Phase 1 封版做准备。
+- Phase 2A 最新已提交基线：`e91e33c polish delivery risk analysis results`
+- 当前测试基线：40/40 通过
+- 远端同步状态：0 ahead / 0 behind
+- 当前目标：记录并冻结 Phase 2A 已完成的只读交期风险分析能力，不新增业务功能。
 
-## 当前工作边界
+## Phase 2A 已完成能力
 
-- Phase 1E 是收口阶段，不开发新业务能力，不恢复旧业务路线。
-- 当前只允许页面结构验收、历史代码标注、轻量文案校正和文档整理。
-- Phase 1 是网页版物料管理基础骨架，不是完整 ERP，也不是旧 MRP Lite。
-- 旧代码仅作为技术地基评估和复用，不作为业务路线依据。
-- 当前不实现真实审核、库存过账、单据保存、采购计划、API、数据库或 V3 Lead Time 能力。
+交期风险分析页面已形成完整的只读分析闭环：
 
-## 已完成基线
+```text
+产品选择
+    → 计划数量
+    → requiredDate
+    → asOfDate
+    → BOM 需求
+    → 库存缺口
+    → 采购周期
+    → 交期风险等级
+    → 分析摘要与说明
+```
 
-- 项目方向初始化与蓝图对齐。
-- `BLUEPRINT_RELATIONSHIP_AUDIT.md` 蓝图关系审计。
-- `PHASE_1_SCOPE.md` Phase 1 范围定义。
-- Phase 1A：Lufuta 产品身份与导航骨架。
-- Phase 1B：领域对象、service、repository/storage 边界骨架。
-- Phase 1C：当前页面以只读方式接入 service 层。
-- Phase 1D：页面业务边界说明整理，已提交并 push（`bff0f40`）。
+- 根据产品 BOM 计算计划需求。
+- 根据库存判断物料缺口。
+- 根据物料采购周期判断交期风险。
+- 展示交期风险等级。
+- 展示分析条件摘要和风险等级说明。
+- 保持原有表格字段和风险结果不变。
 
-## Phase 1E 验收范围
+## 当前业务边界
 
-- 核对当前导航与页面 renderer 一致性。
-- 逐页验证页面可打开、业务定位清楚且移动端基础布局不破坏。
-- 记录未接入导航的历史页面函数，不在本阶段删除或恢复。
-- 更新 Phase 1 状态文档并保持 17/17 测试基线。
+交期风险分析页面仅用于只读分析：
+
+- 不保存正式订单。
+- 不生成采购单。
+- 不修改库存，也不进入库存过账。
+- 不连接 API 或数据库。
+- 不做 Dashboard 汇总。
+- 不恢复旧 `ordersPage` / `analysisPage` 业务路线。
+- 不实现登录、权限或多公司能力。
+
+## Phase 2A 冻结点
+
+- V3 / Phase 2A-Step 13 已完成并提交：`e91e33c polish delivery risk analysis results`。
+- 功能范围稳定：只读分析闭环已完成，业务边界明确。
+- 提交状态稳定：Step 13 已提交，工作树在 Step 14 开始前保持干净。
+- 远端状态稳定：本地与 `origin/lufuta-material-system-lite` 同步，0 ahead / 0 behind。
+- 测试基线稳定：40/40 通过。
 
 ## 下一步
 
-完成 Phase 1E 验收后由 Product Owner 确认是否封版。未经确认不进入 Phase 2，也不提前实现采购周期、真实单据、审核或服务器能力。
+Phase 2A 在 Step 14 完成文档更新后冻结。未经 Product Owner 明确确认，不进入 Phase 2B，也不扩展采购执行、正式订单、库存过账、API、数据库或 Dashboard 能力。
