@@ -117,7 +117,7 @@ function inventoryPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>当前为 Phase 2A 只读分析入口，用于查看 BOM 需求、库存缺口、采购周期与交期风险预览；不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">风险等级预览</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${deliveryFeasibilityPanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2A</span><strong>交期风险分析</strong><p>当前为 Phase 2A 只读分析入口，用于查看 BOM 需求、库存缺口、采购周期与交期风险预览；不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">风险等级预览</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">DELIVERY RISK INPUT</span><h3>分析条件</h3></div><span class="version">不保存</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">DELIVERY RISK ANALYSIS</span><h3>后续分析范围</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>本阶段不保存订单、不生成采购单、不修改库存。</p></article>`;
 }
 
 function orderDecisionSummaryPanel() {
@@ -222,6 +222,54 @@ function deliveryFeasibilityPanel() {
   return `<article class="panel" data-delivery-feasibility style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DELIVERY FEASIBILITY / PHASE 2C</span><h3>交期可行性说明</h3></div><span class="version">只读说明</span></div><div class="placeholder-form"><div><span>期望交期</span><strong>${expectedDate}</strong></div><div><span>分析日期</span><strong>${analysisDate}</strong></div><div><span>剩余天数</span><strong>${remainingDays}</strong></div><div><span>关键采购周期</span><strong>${criticalLeadTime}</strong></div><div><span>计划判断</span><strong>${planningDecision}</strong></div></div><div class="placeholder-copy"><p>本说明用于下单前交期判断，不代表已排产或已承诺交期。具体交期仍需结合采购确认和生产安排。</p></div></article>`;
 }
 
+function procurementPriorityReason(row, group) {
+  if (group === 'immediate') {
+    if (row.procurementLeadTimeDays === null) return '当前缺料，采购周期待确认，建议优先核实。';
+    if (row.riskLevel === 'critical') return `当前缺料，采购周期为 ${formatProcurementLeadTimeDays(row.procurementLeadTimeDays)}，可能影响期望交期，建议优先确认。`;
+    return `当前缺料，采购周期为 ${formatProcurementLeadTimeDays(row.procurementLeadTimeDays)}，建议提前确认。`;
+  }
+  if (group === 'attention') return '生产后预计剩余库存低于安全库存，建议持续关注库存和采购周期。';
+  return '当前库存可覆盖本单，生产后库存仍处于安全范围。';
+}
+
+function procurementPriorityMaterial(row, group) {
+  const quantityLabel = group === 'immediate'
+    ? `缺口：${format(row.shortageQty)} ${row.material.unit}`
+    : `预计剩余：${format(row.remainingQty)} ${row.material.unit}`;
+  return `<div class="alert-row"><div class="grow"><strong>${row.material.name}</strong><small>${row.material.code} · 需求：${format(row.requiredQty)} ${row.material.unit} · 库存：${format(row.stockQty)} ${row.material.unit}</small><small>${quantityLabel} · 采购周期：${formatProcurementLeadTimeDays(row.procurementLeadTimeDays)}</small><small>${procurementPriorityReason(row, group)}</small></div></div>`;
+}
+
+function procurementPriorityGroup({ key, title, description, emptyText, rows }) {
+  const content = rows.length
+    ? `<div class="alert-list">${rows.map((row) => procurementPriorityMaterial(row, key)).join('')}</div>`
+    : `<div class="empty-table"><p>${emptyText}</p></div>`;
+  return `<section class="panel" data-priority-group="${key}"><div class="panel-head"><div><span class="kicker">${key.toUpperCase()}</span><h3>${title}</h3></div><span class="version">${rows.length} 项</span></div><div class="placeholder-copy"><p>${description}</p></div>${content}</section>`;
+}
+
+function procurementPriorityGroupsPanel() {
+  const rows = deliveryRiskPreview?.rows;
+  if (!rows) return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PROCUREMENT PRIORITY / PHASE 2C</span><h3>采购优先级分组</h3></div><span class="version">只读分组</span></div><div class="empty-table"><strong>等待分析</strong><p>请先完成分析条件并生成结果，再查看采购优先级分组。</p></div></article>`;
+  if (!rows.length) return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PROCUREMENT PRIORITY / PHASE 2C</span><h3>采购优先级分组</h3></div><span class="version">只读分组</span></div><div class="empty-table"><strong>暂无法分组</strong><p>当前产品尚未维护 BOM，缺少可用于采购判断的物料需求。</p></div></article>`;
+
+  const immediate = [];
+  const attention = [];
+  const noPurchase = [];
+  rows.forEach((row) => {
+    if (row.recommendation.action === '建议采购' || row.shortageQty > 0) immediate.push(row);
+    else if (row.recommendation.action === '建议补充安全库存' || row.quantityRisk === 'low') attention.push(row);
+    else if (row.recommendation.action === '无需采购') noPurchase.push(row);
+    else attention.push(row);
+  });
+
+  const groups = [
+    { key: 'immediate', title: '立即确认', description: '立即确认以下物料，避免影响当前订单交期。', emptyText: '暂无需要立即确认的物料', rows: immediate },
+    { key: 'attention', title: '建议关注', description: '以下物料当前可能不影响本单，但建议持续关注库存和采购周期。', emptyText: '暂无需要重点关注的物料', rows: attention },
+    { key: 'no-purchase', title: '暂不采购', description: '以下物料当前库存可覆盖本单，暂不建议立即采购。', emptyText: '暂无可归入暂不采购的物料', rows: noPurchase },
+  ];
+
+  return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PROCUREMENT PRIORITY / PHASE 2C</span><h3>采购优先级分组</h3></div><span class="version">${rows.length} 项物料</span></div><div class="entry-grid">${groups.map(procurementPriorityGroup).join('')}</div><div class="placeholder-copy"><p>本分组仅用于采购判断参考，不代表已创建采购任务。</p></div></article>`;
+}
+
 function deliveryRiskPreviewPanel() {
   if (!deliveryRiskPreview) return '';
   const { product, plannedQty, requiredDate, asOfDate, rows } = deliveryRiskPreview;
@@ -308,6 +356,8 @@ function bindEvents() {
     if (decisionSummary) decisionSummary.outerHTML = orderDecisionSummaryPanel();
     const feasibility = document.querySelector('[data-delivery-feasibility]');
     if (feasibility) feasibility.outerHTML = deliveryFeasibilityPanel();
+    const priorityGroups = document.querySelector('[data-procurement-priority-groups]');
+    if (priorityGroups) priorityGroups.outerHTML = procurementPriorityGroupsPanel();
   }));
   document.querySelectorAll('[data-order]').forEach((input) => input.addEventListener('input', () => updateOrder(input.dataset.order, input.value)));
   document.querySelectorAll('[data-step]').forEach((btn) => btn.addEventListener('click', () => { const input = document.querySelector(`[data-order="${btn.dataset.id}"]`); input.value = Math.max(0, Number(input.value) + Number(btn.dataset.step)); updateOrder(btn.dataset.id, input.value); }));
