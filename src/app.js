@@ -36,7 +36,7 @@ const DELIVERY_RISK_REASONS = {
 
 const pages = [
   ['dashboard', '首页', 'grid'], ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'],
-  ['inventory', '库存台账', 'warehouse'], ['delivery-risk', '交期风险分析', 'chart'], ['audit', '待审核流水', 'chart'], ['inbound', '入库', 'box'],
+  ['inventory', '库存台账', 'warehouse'], ['warehouse-alerts', '库存预警', 'warehouse'], ['delivery-risk', '交期风险分析', 'chart'], ['audit', '待审核流水', 'chart'], ['inbound', '入库', 'box'],
   ['outbound', '领料', 'cart'], ['supplier-return', '供应商退货', 'warehouse'],
 ];
 
@@ -112,6 +112,25 @@ function inventoryPage() {
   const materials = materialService.listMaterials();
   const balances = inventoryService.listBalances();
   return `${skeletonNotice('库存台账', '当前只读展示 Lite 阶段的演示库存，用于安全库存与缺料风险判断。采购周期来自物料主数据，旧演示库存字段仅作兼容回退。这里不是真实库存账，本阶段不提供入库、出库、冻结、盘点、过账、批次或库位管理。')}${tablePage({ description: '库存数量来自浏览器中的演示数据，不会生成库存单据。', columns: ['物料', '当前库存', '安全库存', '采购周期', '风险状态', '仓位 / 库位', '最后更新'], rows: materials.map((m) => { const inv = balances.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); const leadTimeDays = resolveProcurementLeadTimeDays(m, inv); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td>${formatProcurementLeadTimeDays(leadTimeDays)}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">未启用</span></td><td><span class="muted">演示数据</span></td></tr>` }) })}`;
+}
+
+function warehouseAlertsPage() {
+  const materials = materialService.listMaterials();
+  const balances = inventoryService.listBalances();
+  const zeroStockCount = materials.filter((material) => {
+    const balance = balances.find((item) => item.materialId === material.id);
+    return Number(balance?.stockQty ?? 0) === 0;
+  }).length;
+  const lowStockCount = materials.filter((material) => {
+    const balance = balances.find((item) => item.materialId === material.id);
+    return Number(balance?.stockQty ?? 0) < Number(balance?.safetyStock ?? 0);
+  }).length;
+
+  return `${skeletonNotice('库存预警与仓库反馈', '这是仓库角色使用的只读库存风险视图，用于查看库存预警、复查建议，以及对计划 / 采购的反馈提示。当前不修改库存、不保存复查结果、不生成采购单。')}
+    <div class="stats-grid">${statCard('当前物料总数', materials.length, '来自现有物料资料', 'violet', 'layers')}${statCard('库存不足数量', zeroStockCount, '当前库存为 0 的物料', 'red', 'warehouse')}${statCard('低于安全库存数量', lowStockCount, '按现有库存台账只读汇总', 'amber', 'chart')}${statCard('关键物料风险数量', '待定义', '后续确认关键物料口径', 'blue', 'box')}</div>
+    <article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE ALERTS</span><h3>库存预警列表</h3></div><span class="version">只读占位</span></div>${empty('暂无库存预警明细', '后续将显示库存不足、低于安全库存、关键物料库存偏低等物料。')}</article>
+    <div class="document-shell"><article class="panel"><div class="panel-head"><div><span class="kicker">RECHECK NOTES</span><h3>仓库复查建议</h3></div><span class="version">不保存结果</span></div>${empty('暂无复查建议', '后续将提示需要仓库复查的库存数字。')}</article>
+    <article class="panel workflow-panel"><span class="kicker">FEEDBACK ONLY</span><h3>对计划 / 采购的反馈提示</h3><div class="workflow-steps"><span>库存状态</span><b>→</b><span>风险提示</span><b>→</b><span>计划 / 采购参考</span></div><p>仓库反馈用于帮助计划和采购判断库存可靠性，不直接生成采购单，不修改采购建议，也不改变库存数据。</p></article></div>`;
 }
 
 function deliveryRiskPage() {
@@ -331,6 +350,7 @@ function render() {
     materials: () => `${skeletonNotice('物料资料', '当前只读展示 Lite 阶段的物料编码、名称、分类、单位与采购周期。采购周期属于物料主数据，用于后续交期风险和采购时点分析。本阶段不提供维护表单，也不代表供应商报价、采购合同、财务成本或 ERP 正式主数据。')}${materialsPage()}`,
     'product-bom': productBomPage,
     inventory: inventoryPage,
+    'warehouse-alerts': warehouseAlertsPage,
     'delivery-risk': deliveryRiskPage,
     audit: auditPage,
     inbound: () => documentPlaceholder('入库', '审核通过后库存增加', '后续将承载供应商到货入库。'),
