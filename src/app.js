@@ -117,17 +117,17 @@ function inventoryPage() {
 function warehouseAlertsPage() {
   const materials = materialService.listMaterials();
   const balances = inventoryService.listBalances();
-  const zeroStockCount = materials.filter((material) => {
-    const balance = balances.find((item) => item.materialId === material.id);
-    return Number(balance?.stockQty ?? 0) === 0;
-  }).length;
-  const lowStockCount = materials.filter((material) => {
-    const balance = balances.find((item) => item.materialId === material.id);
-    return Number(balance?.stockQty ?? 0) < Number(balance?.safetyStock ?? 0);
-  }).length;
+  const inventoryRows = materials.map((material) => {
+    const balance = balances.find((item) => item.materialId === material.id) || {};
+    return { stockQty: Number(balance.stockQty ?? 0), safetyStock: Number(balance.safetyStock ?? 0) };
+  });
+  const zeroStockCount = inventoryRows.filter((row) => row.stockQty <= 0).length;
+  const lowStockCount = inventoryRows.filter((row) => row.stockQty > 0 && row.stockQty < row.safetyStock).length;
+  const normalStockCount = inventoryRows.filter((row) => row.stockQty >= row.safetyStock).length;
 
   return `${skeletonNotice('库存预警与仓库反馈', '这是仓库角色使用的只读库存风险视图，用于查看库存预警、复查建议，以及对计划 / 采购的反馈提示。当前不修改库存、不保存复查结果、不生成采购单。')}
-    <div class="stats-grid">${statCard('当前物料总数', materials.length, '来自现有物料资料', 'violet', 'layers')}${statCard('库存不足数量', zeroStockCount, '当前库存为 0 的物料', 'red', 'warehouse')}${statCard('低于安全库存数量', lowStockCount, '按现有库存台账只读汇总', 'amber', 'chart')}${statCard('关键物料风险数量', '待定义', '后续确认关键物料口径', 'blue', 'box')}</div>
+    <div class="stats-grid">${statCard('物料总数', materials.length, '来自现有物料资料', 'violet', 'layers')}${statCard('库存为 0', zeroStockCount, '当前库存小于等于 0', 'red', 'warehouse')}${statCard('低于安全库存', lowStockCount, '库存大于 0 且低于安全库存', 'amber', 'chart')}${statCard('库存正常', normalStockCount, '当前库存大于等于安全库存', 'blue', 'box')}</div>
+    <div class="page-intro"><div><p>以上数字基于当前演示库存只读汇总，仅用于仓库预警参考；安全库存缺失或为 0 时不纳入低库存判断。</p></div></div>
     <article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE ALERTS</span><h3>库存预警列表</h3></div><span class="version">只读占位</span></div>${empty('暂无库存预警明细', '后续将显示库存不足、低于安全库存、关键物料库存偏低等物料。')}</article>
     <div class="document-shell"><article class="panel"><div class="panel-head"><div><span class="kicker">RECHECK NOTES</span><h3>仓库复查建议</h3></div><span class="version">不保存结果</span></div>${empty('暂无复查建议', '后续将提示需要仓库复查的库存数字。')}</article>
     <article class="panel workflow-panel"><span class="kicker">FEEDBACK ONLY</span><h3>对计划 / 采购的反馈提示</h3><div class="workflow-steps"><span>库存状态</span><b>→</b><span>风险提示</span><b>→</b><span>计划 / 采购参考</span></div><p>仓库反馈用于帮助计划和采购判断库存可靠性，不直接生成采购单，不修改采购建议，也不改变库存数据。</p></article></div>`;
