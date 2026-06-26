@@ -163,7 +163,7 @@ function warehouseAlertsPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2C</span><strong>下单前交期与采购分析</strong><p>根据计划数量、BOM、库存和采购周期，提供下单判断、交期说明与采购关注重点。页面仅供分析，不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>分析依据与边界</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2C</span><strong>下单前交期与采购分析</strong><p>根据计划数量、BOM、库存和采购周期，提供下单判断、交期说明与采购关注重点。页面仅供分析，不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${riskSourceSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>分析依据与边界</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
 }
 
 function orderDecisionSummaryPanel() {
@@ -220,6 +220,29 @@ function orderDecisionSummaryPanel() {
   }
 
   return `<article class="panel" data-order-decision-summary style="margin:18px 0"><div class="panel-head"><div><span class="kicker">老板视角 · 下单判断</span><h3>订单决策摘要</h3></div><span class="version">只读判断</span></div><div class="placeholder-form"><div><span>当前判断</span><strong>${decision.judgment}</strong></div><div><span>风险等级</span><strong>${decision.riskLevel}</strong></div><div><span>主要原因</span><strong>${decision.reason}</strong></div><div><span>下单建议</span><strong>${decision.action}</strong></div></div></article>`;
+}
+
+function riskSourceSummaryPanel() {
+  const rows = deliveryRiskPreview?.rows;
+  const sources = [
+    ['缺料风险', '等待分析', '生成结果后查看是否存在物料缺口。'],
+    ['采购周期', '等待分析', '生成结果后查看是否存在采购周期风险。'],
+    ['安全库存', '等待分析', '生成结果后查看安全库存是否可能影响后续订单。'],
+    ['仓库反馈', '等待分析', '生成结果后查看库存状态不确定性提示。'],
+  ];
+
+  if (rows) {
+    const hasShortage = rows.some((row) => row.shortageQty > 0);
+    const hasProcurementRisk = rows.some((row) => row.riskLevel === 'critical' || row.riskLevel === 'warning' || (row.recommendation.recommendedQty > 0 && row.procurementLeadTimeDays === null));
+    const hasSafetyStockRisk = rows.some((row) => row.quantityRisk === 'low' || row.recommendation.action === '建议补充安全库存');
+    const hasWarehouseFeedback = rows.map((row, index) => warehouseFeedbackForRow(row, index)).some((feedback) => feedback.feedback !== '暂无异常');
+    sources[0] = ['缺料风险', hasShortage ? '存在物料缺口，可能影响订单交付' : '暂无明显缺料风险', hasShortage ? '老板需要知道当前订单可能先卡在可用库存上。' : '当前库存对本单的直接缺料压力较低。'];
+    sources[1] = ['采购周期', hasProcurementRisk ? '部分物料需要采购提前确认' : '暂无明显采购周期风险', hasProcurementRisk ? '老板需要知道交期是否依赖采购及时确认。' : '当前采购周期暂未形成主要交付风险。'];
+    sources[2] = ['安全库存', hasSafetyStockRisk ? '下批订单可能继续受影响' : '安全库存状态相对稳定', hasSafetyStockRisk ? '老板需要知道本单后续可能压低安全库存。' : '当前安全库存暂未形成明显连续订单风险。'];
+    sources[3] = ['仓库反馈', hasWarehouseFeedback ? '生产前需要复查实物可用性' : '暂无明显仓库库存异常提示', hasWarehouseFeedback ? '老板需要知道账面库存仍需结合仓库实物反馈确认。' : '当前仓库反馈未提示额外库存不确定性。'];
+  }
+
+  return `<article class="panel table-panel" data-risk-source-summary style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">老板视角 · 风险来源</span><h3>风险来源说明</h3></div><span class="version">只读说明</span></div><div class="placeholder-copy"><p>风险来源说明仅用于老板阅读，不会改变系统计算结果、采购建议或库存数量。</p></div><div class="table-wrap"><table><thead><tr><th>风险来源</th><th>当前判断</th><th>老板需要知道</th></tr></thead><tbody>${sources.map(([source, judgment, note]) => `<tr><td><strong>${source}</strong></td><td>${judgment}</td><td>${note}</td></tr>`).join('')}</tbody></table></div></article>`;
 }
 
 function calendarDaysBetween(fromDate, toDate) {
@@ -425,6 +448,8 @@ function bindEvents() {
     document.querySelector('[data-delivery-risk-legend]')?.remove();
     const decisionSummary = document.querySelector('[data-order-decision-summary]');
     if (decisionSummary) decisionSummary.outerHTML = orderDecisionSummaryPanel();
+    const riskSourceSummary = document.querySelector('[data-risk-source-summary]');
+    if (riskSourceSummary) riskSourceSummary.outerHTML = riskSourceSummaryPanel();
     const feasibility = document.querySelector('[data-delivery-feasibility]');
     if (feasibility) feasibility.outerHTML = deliveryFeasibilityPanel();
     const priorityGroups = document.querySelector('[data-procurement-priority-groups]');
