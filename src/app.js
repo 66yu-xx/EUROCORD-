@@ -62,8 +62,8 @@ function appShell(content) {
   return `<div class="shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">L</div><div><strong>LUFUTA LITE</strong><small>物料管理系统</small></div></div>
-      <nav><p>Phase 1 工作台</p>${pages.map(([id, label, ico]) => `<button class="nav-item ${currentPage === id ? 'active' : ''}" data-page="${id}">${icon(ico)}<span>${label}</span></button>`).join('')}</nav>
-      <div class="sidebar-footer"><div class="demo-dot"></div><div><strong>Phase 1 原型</strong><small>当前使用浏览器存储</small></div><button class="reset-button" data-action="reset-data" title="重置原型数据"><b>↺</b><span>重置原型数据</span></button></div>
+      <nav><p>演示导览</p>${pages.map(([id, label, ico]) => `<button class="nav-item ${currentPage === id ? 'active' : ''}" data-page="${id}">${icon(ico)}<span>${label}</span></button>`).join('')}</nav>
+      <div class="sidebar-footer"><div class="demo-dot"></div><div><strong>只读演示</strong><small>当前使用浏览器存储</small></div><button class="reset-button" data-action="reset-data" title="重置演示数据"><b>↺</b><span>重置演示数据</span></button></div>
     </aside>
     <main><header><div><small>LUFUTA 物料管理系统 LITE / ${active[1]}</small><h1>${active[1]}</h1></div><div class="header-actions"><span class="date">${new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date())}</span><button class="avatar">L</button></div></header><section class="content">${content}</section></main>
     <div id="modal-root"></div><div id="toast" class="toast"></div>
@@ -309,7 +309,7 @@ function productBomPage() {
   const selected = sessionStorage.getItem('selectedProduct') || products[0]?.id;
   const items = productService.listBOMItems(selected);
   const selectedProduct = products.find((product) => product.id === selected);
-  return `${skeletonNotice('产品 / BOM', '当前只读展示 Lite 产品基础资料及其物料用量关系，供结构验证和后续缺料计算使用。产品侧不含审批、版本冻结、生命周期或客户订单绑定；BOM 侧不含审核、工程变更、版本发布或历史追踪。')}<div class="product-tabs">${products.map((p) => `<button class="product-tab ${p.id === selected ? 'active' : ''}" data-product-tab="${p.id}"><small>${p.model}</small><strong>${p.code}</strong><span>${productService.listBOMItems(p.id).length} 项物料</span></button>`).join('')}</div><article class="panel table-panel"><div class="panel-head bom-title"><div><span class="kicker">PRODUCT / BOM SKELETON</span><h3>${selectedProduct?.code || '未知产品'} 物料组成</h3></div><span class="version">Phase 1 · 只读演示</span></div><div class="table-wrap"><table><thead><tr><th>序号</th><th>物料编码</th><th>物料名称</th><th>分类</th><th>单台用量</th><th>单位</th><th>BOM 版本</th></tr></thead><tbody>${items.map((row, index) => { const material = materials.find((m) => m.id === row.materialId); if (!material) return ''; return `<tr><td class="muted">${String(index + 1).padStart(2, '0')}</td><td><strong class="code">${material.code}</strong></td><td>${material.name}</td><td><span class="soft-tag">${material.category}</span></td><td><strong>${row.qtyPerProduct}</strong></td><td>${material.unit}</td><td><span class="muted">未启用</span></td></tr>`; }).join('')}</tbody></table></div></article>`;
+  return `${skeletonNotice('产品 / BOM', '当前只读展示 Lite 产品基础资料及其物料用量关系，供结构验证和后续缺料计算使用。产品侧不含审批、版本冻结、生命周期或客户订单绑定；BOM 侧不含审核、工程变更、版本发布或历史追踪。')}<div class="product-tabs">${products.map((p) => `<button class="product-tab ${p.id === selected ? 'active' : ''}" data-product-tab="${p.id}"><small>${p.model}</small><strong>${p.code}</strong><span>${productService.listBOMItems(p.id).length} 项物料</span></button>`).join('')}</div><article class="panel table-panel"><div class="panel-head bom-title"><div><span class="kicker">PRODUCT / BOM SKELETON</span><h3>${selectedProduct?.code || '未知产品'} 物料组成</h3></div><span class="version">只读演示</span></div><div class="table-wrap"><table><thead><tr><th>序号</th><th>物料编码</th><th>物料名称</th><th>分类</th><th>单台用量</th><th>单位</th><th>BOM 版本</th></tr></thead><tbody>${items.map((row, index) => { const material = materials.find((m) => m.id === row.materialId); if (!material) return ''; return `<tr><td class="muted">${String(index + 1).padStart(2, '0')}</td><td><strong class="code">${material.code}</strong></td><td>${material.name}</td><td><span class="soft-tag">${material.category}</span></td><td><strong>${row.qtyPerProduct}</strong></td><td>${material.unit}</td><td><span class="muted">未启用</span></td></tr>`; }).join('')}</tbody></table></div></article>`;
 }
 
 function auditPage() {
@@ -323,15 +323,15 @@ function auditPage() {
     return `<tr><td><strong class="code">${document.documentNo || '待编号'}</strong></td><td>${document.documentType || '未分类'}</td><td>${document.applicantName || '未填写'}</td><td>${submittedAt}</td><td>${document.inventoryEffect || 'none'}</td><td>${riskFlags}</td><td><span class="soft-tag">${status}</span></td></tr>`;
   });
   const body = rows.length ? rows.join('') : '<tr><td colspan="7"><div class="empty-table"><strong>暂无演示记录</strong><p>当前页面只读展示审核池结构，尚不能保存或提交单据。</p></div></td></tr>';
-  return `${skeletonNotice('待审核流水 / 审核池', '当前只读展示朋友蓝图中的待审核记录结构，用于验证未来业务链路。本阶段不执行单据保存、真实审批、权限判断或库存过账。')}<article class="panel table-panel"><div class="panel-head"><div><span class="kicker">PENDING DOCUMENTS</span><h3>待审核业务记录</h3></div><span class="version">${pendingDocuments.length} 条 · 只读演示</span></div><div class="table-wrap"><table><thead><tr><th>单据编号</th><th>单据类型</th><th>申请人</th><th>提交时间</th><th>库存影响</th><th>风险标记</th><th>审核状态</th></tr></thead><tbody>${body}</tbody></table></div></article>`;
+  return `${skeletonNotice('待审核流水 / 审核池', '当前只读展示朋友蓝图中的待审核记录结构，用于验证未来业务链路。当前演示不执行单据保存、真实审批、权限判断或库存过账。')}<article class="panel table-panel"><div class="panel-head"><div><span class="kicker">PENDING DOCUMENTS</span><h3>待审核业务记录</h3></div><span class="version">${pendingDocuments.length} 条 · 只读演示</span></div><div class="table-wrap"><table><thead><tr><th>单据编号</th><th>单据类型</th><th>申请人</th><th>提交时间</th><th>库存影响</th><th>风险标记</th><th>审核状态</th></tr></thead><tbody>${body}</tbody></table></div></article>`;
 }
 
 function documentPlaceholder(type, direction, description) {
-  return `${skeletonNotice(type, `当前仅展示${type}业务入口及未来库存方向，不提供单据填写、保存、提交或审核。这里不会修改库存，也不会连接 API 或数据库。`)}<div class="document-shell"><article class="panel"><div class="panel-head"><div><span class="kicker">DOCUMENT ENTRY</span><h3>${type}单据骨架</h3></div><span class="version">仅作流程说明</span></div><div class="placeholder-form"><div><span>业务类型</span><strong>${type}</strong></div><div><span>未来库存方向</span><strong>${direction}</strong></div><div><span>当前说明</span><strong>${description}</strong></div></div></article><article class="panel workflow-panel"><span class="kicker">PLANNED BUSINESS FLOW</span><h3>规划中的业务链路</h3><div class="workflow-steps"><span>填写单据</span><b>→</b><span>保存待审核</span><b>→</b><span>审核通过</span><b>→</b><span>${direction}</span></div><p>以上仅为蓝图流程说明，Phase 1 不执行这些动作。</p></article></div>`;
+  return `${skeletonNotice(type, `当前仅展示${type}模块的后续方向，不提供单据填写、保存、提交或审核。这里不会修改库存、不会过账，也不会连接 API 或数据库。`)}<div class="document-shell"><article class="panel"><div class="panel-head"><div><span class="kicker">PLACEHOLDER MODULE</span><h3>${type}模块占位</h3></div><span class="version">仅展示方向</span></div><div class="placeholder-form"><div><span>占位模块</span><strong>${type}</strong></div><div><span>后续方向</span><strong>${direction}</strong></div><div><span>当前说明</span><strong>${description}</strong></div></div></article><article class="panel workflow-panel"><span class="kicker">FUTURE DIRECTION</span><h3>后续执行方向</h3><div class="workflow-steps"><span>单据记录</span><b>→</b><span>审核确认</span><b>→</b><span>库存影响</span></div><p>以上仅为后续方向说明；当前演示不填写、不保存、不提交、不审核，也不修改库存。</p></article></div>`;
 }
 
 function skeletonNotice(title, message) {
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 1</span><strong>${title}</strong><p>${message}</p></div><span class="phase-chip">演示与验证</span></div>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 4 DEMO</span><strong>${title}</strong><p>${message}</p></div><span class="phase-chip">只读演示</span></div>`;
 }
 
 // Legacy MRP Lite simulation pages remain as technical reference only. Their future use must
@@ -357,9 +357,9 @@ function render() {
     'warehouse-alerts': warehouseAlertsPage,
     'delivery-risk': deliveryRiskPage,
     audit: auditPage,
-    inbound: () => documentPlaceholder('入库', '审核通过后库存增加', '后续将承载供应商到货入库。'),
-    outbound: () => documentPlaceholder('领料', '审核通过后库存减少', '后续可从产品 BOM 带入领料需求。'),
-    'supplier-return': () => documentPlaceholder('供应商退货', '审核通过后库存减少', '这里指退回供应商，不是生产退料。'),
+    inbound: () => documentPlaceholder('入库占位', '后续可记录到货入库方向', '当前不提供入库单填写、保存、审核或库存增加。'),
+    outbound: () => documentPlaceholder('领料占位', '后续可记录领料出库方向', '当前不提供领料单填写、保存、审核或库存扣减。'),
+    'supplier-return': () => documentPlaceholder('退货占位', '后续可记录退回供应商方向', '当前不提供退货单填写、保存、审核或库存扣减。'),
   };
   document.querySelector('#app').innerHTML = appShell(renderers[currentPage]());
   bindEvents();
