@@ -135,10 +135,20 @@ function warehouseAlertsPage() {
     ['采购判断供应准备', '采购只接收关注提示，提前识别供应风险；仓库不能决定采购数量或下单。', 'cart'],
     ['老板查看交付风险汇总', '老板看到的是跨角色汇总后的订单交付风险，不是单条仓库操作记录。', 'grid'],
   ];
+  const warehouseFeedbackRows = inventoryRows.map((row, index) => {
+    if (row.stockQty <= 0) return { ...row, systemStatus: '库存为 0', feedback: '账面库存可能不可靠', target: '计划 / 采购', note: '计划排产前需确认可用数量，采购可提前关注供应风险；这不是采购申请。' };
+    if (row.stockQty < row.safetyStock) return { ...row, systemStatus: '低于安全库存', feedback: '生产前需确认可用数量', target: '计划 / 采购', note: '库存低于安全库存，提醒计划复核排产风险，并同步采购关注供应准备。' };
+    if (row.safetyStock <= 0) return { ...row, systemStatus: '安全库存未维护', feedback: '实物数量需复查', target: '计划', note: '安全库存基准缺失，提醒计划在订单判断前确认库存可用性。' };
+    if (index % 5 === 0) return { ...row, systemStatus: '库存正常', feedback: '物料位置需确认', target: '计划', note: '库存数量未触发预警，仅演示仓库可提示排产前确认物料位置。' };
+    if (index % 5 === 1) return { ...row, systemStatus: '库存正常', feedback: '包装 / 状态待确认', target: '计划', note: '库存数量未触发预警，仅演示仓库可提示实物包装或状态待确认。' };
+    return { ...row, systemStatus: '库存正常', feedback: '暂无异常', target: '无', note: '当前库存状态未触发仓库风险反馈。' };
+  });
+  const warehouseFeedbackTable = `${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料</th><th>系统库存状态</th><th>仓库状态反馈</th><th>影响对象</th><th>说明</th></tr></thead><tbody>${warehouseFeedbackRows.map((row) => `<tr><td><div class="cell-main"><div class="material-avatar small">${row.material.name[0]}</div><div><strong>${row.material.name}</strong><small>${row.material.code} · ${format(row.stockQty)} ${row.material.unit}</small></div></div></td><td><span class="soft-tag">${row.systemStatus}</span></td><td>${row.feedback}</td><td>${row.target}</td><td>${row.note}</td></tr>`).join('')}</tbody></table></div>`;
 
   return `${skeletonNotice('库存预警与仓库反馈（只读）', '仓库库存状态反馈与跨角色预警：仓库只反馈库存状态风险，提醒计划确认排产风险，同步采购关注供应准备，最终汇总给老板查看交付风险。')}
     <div class="page-intro"><div><span class="kicker">WAREHOUSE FEEDBACK BOUNDARY</span><h3 style="margin:4px 0 6px;font-size:16px">仓库库存状态反馈与跨角色预警</h3><p>仓库侧用于查看库存预警、反馈实物状态和提示库存风险；仓库反馈不是采购申请，不能直接决定采购数量或下单。当前阶段仅为只读演示，不保存反馈、不修改库存、不生成库存流水。</p></div></div>
     <article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ROLE BOUNDARY</span><h3>仓库反馈型角色边界</h3></div><span class="version">Phase 5-Step 1 · 只读</span></div><div class="entry-grid">${boundaryCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>仓库反馈不是采购申请</strong><p>本阶段不会修改库存、不会保存记录、不会生成库存流水、不会生成采购单。</p></div></article>
+    <article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE STATUS FEEDBACK</span><h3>仓库库存状态反馈列表</h3></div><span class="version">${warehouseFeedbackRows.length} 项 · 只读演示</span></div><div class="placeholder-copy"><p>以下内容为只读演示反馈，不会保存记录，不会修改库存，不会生成采购单。</p></div>${warehouseFeedbackTable}</article>
     <div class="page-intro"><div><span class="kicker">WAREHOUSE OVERVIEW</span><h3 style="margin:4px 0 6px;font-size:16px">仓库库存概览</h3><p>以下数字基于当前演示库存只读汇总，仅用于仓库预警参考；安全库存缺失或为 0 时不纳入低库存判断，也不会自动触发任何业务单据。</p></div></div>
     <div class="stats-grid">${statCard('物料总数', materials.length, '来自现有物料资料', 'violet', 'layers')}${statCard('库存为 0', zeroStockCount, '当前库存小于等于 0', 'red', 'warehouse')}${statCard('低于安全库存', lowStockCount, '库存大于 0 且低于安全库存', 'amber', 'chart')}${statCard('库存正常', normalStockCount, '当前库存大于等于安全库存', 'blue', 'box')}</div>
     <article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE ALERTS</span><h3>库存预警列表</h3></div><span class="version">${alertRows.length} 项 · 只读</span></div><div class="placeholder-copy"><p>未维护安全库存或安全库存为 0 的物料暂不纳入低库存预警；本列表只显示库存为 0 和低于安全库存的只读提示。</p></div>${alertTable}</article>
