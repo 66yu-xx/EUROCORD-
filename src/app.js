@@ -114,6 +114,17 @@ function inventoryPage() {
   return `${skeletonNotice('库存台账', '当前只读展示 Lite 阶段的演示库存，用于安全库存与缺料风险判断。采购周期来自物料主数据，旧演示库存字段仅作兼容回退。这里不是真实库存账，本阶段不提供入库、出库、冻结、盘点、过账、批次或库位管理。')}${tablePage({ description: '库存数量来自浏览器中的演示数据，不会生成库存单据。', columns: ['物料', '当前库存', '安全库存', '采购周期', '风险状态', '仓位 / 库位', '最后更新'], rows: materials.map((m) => { const inv = balances.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); const leadTimeDays = resolveProcurementLeadTimeDays(m, inv); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td>${formatProcurementLeadTimeDays(leadTimeDays)}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">未启用</span></td><td><span class="muted">演示数据</span></td></tr>` }) })}`;
 }
 
+function warehouseFeedbackForRow(row, index) {
+  const stockQty = Number(row.stockQty ?? 0);
+  const safetyStock = Number(row.safetyStock ?? 0);
+  if (stockQty <= 0) return { ...row, systemStatus: '库存为 0', feedback: '账面库存可能不可靠', target: '计划 / 采购', note: '计划排产前需确认可用数量，采购可提前关注供应风险；这不是采购申请。' };
+  if (stockQty < safetyStock) return { ...row, systemStatus: '低于安全库存', feedback: '生产前需确认可用数量', target: '计划 / 采购', note: '库存低于安全库存，提醒计划复核排产风险，并同步采购关注供应准备。' };
+  if (safetyStock <= 0) return { ...row, systemStatus: '安全库存未维护', feedback: '实物数量需复查', target: '计划', note: '安全库存基准缺失，提醒计划在订单判断前确认库存可用性。' };
+  if (index % 5 === 0) return { ...row, systemStatus: '库存正常', feedback: '物料位置需确认', target: '计划', note: '库存数量未触发预警，仅演示仓库可提示排产前确认物料位置。' };
+  if (index % 5 === 1) return { ...row, systemStatus: '库存正常', feedback: '包装 / 状态待确认', target: '计划', note: '库存数量未触发预警，仅演示仓库可提示实物包装或状态待确认。' };
+  return { ...row, systemStatus: '库存正常', feedback: '暂无异常', target: '无', note: '当前库存状态未触发仓库风险反馈。' };
+}
+
 function warehouseAlertsPage() {
   const materials = materialService.listMaterials();
   const balances = inventoryService.listBalances();
@@ -135,14 +146,7 @@ function warehouseAlertsPage() {
     ['采购判断供应准备', '采购只接收关注提示，提前识别供应风险；仓库不能决定采购数量或下单。', 'cart'],
     ['老板查看交付风险汇总', '老板看到的是跨角色汇总后的订单交付风险，不是单条仓库操作记录。', 'grid'],
   ];
-  const warehouseFeedbackRows = inventoryRows.map((row, index) => {
-    if (row.stockQty <= 0) return { ...row, systemStatus: '库存为 0', feedback: '账面库存可能不可靠', target: '计划 / 采购', note: '计划排产前需确认可用数量，采购可提前关注供应风险；这不是采购申请。' };
-    if (row.stockQty < row.safetyStock) return { ...row, systemStatus: '低于安全库存', feedback: '生产前需确认可用数量', target: '计划 / 采购', note: '库存低于安全库存，提醒计划复核排产风险，并同步采购关注供应准备。' };
-    if (row.safetyStock <= 0) return { ...row, systemStatus: '安全库存未维护', feedback: '实物数量需复查', target: '计划', note: '安全库存基准缺失，提醒计划在订单判断前确认库存可用性。' };
-    if (index % 5 === 0) return { ...row, systemStatus: '库存正常', feedback: '物料位置需确认', target: '计划', note: '库存数量未触发预警，仅演示仓库可提示排产前确认物料位置。' };
-    if (index % 5 === 1) return { ...row, systemStatus: '库存正常', feedback: '包装 / 状态待确认', target: '计划', note: '库存数量未触发预警，仅演示仓库可提示实物包装或状态待确认。' };
-    return { ...row, systemStatus: '库存正常', feedback: '暂无异常', target: '无', note: '当前库存状态未触发仓库风险反馈。' };
-  });
+  const warehouseFeedbackRows = inventoryRows.map(warehouseFeedbackForRow);
   const warehouseFeedbackTable = `${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料</th><th>系统库存状态</th><th>仓库状态反馈</th><th>影响对象</th><th>说明</th></tr></thead><tbody>${warehouseFeedbackRows.map((row) => `<tr><td><div class="cell-main"><div class="material-avatar small">${row.material.name[0]}</div><div><strong>${row.material.name}</strong><small>${row.material.code} · ${format(row.stockQty)} ${row.material.unit}</small></div></div></td><td><span class="soft-tag">${row.systemStatus}</span></td><td>${row.feedback}</td><td>${row.target}</td><td>${row.note}</td></tr>`).join('')}</tbody></table></div>`;
 
   return `${skeletonNotice('库存预警与仓库反馈（只读）', '仓库库存状态反馈与跨角色预警：仓库只反馈库存状态风险，提醒计划确认排产风险，同步采购关注供应准备，最终汇总给老板查看交付风险。')}
@@ -159,7 +163,7 @@ function warehouseAlertsPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2C</span><strong>下单前交期与采购分析</strong><p>根据计划数量、BOM、库存和采购周期，提供下单判断、交期说明与采购关注重点。页面仅供分析，不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>分析依据与边界</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2C</span><strong>下单前交期与采购分析</strong><p>根据计划数量、BOM、库存和采购周期，提供下单判断、交期说明与采购关注重点。页面仅供分析，不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>分析依据与边界</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
 }
 
 function orderDecisionSummaryPanel() {
@@ -310,6 +314,30 @@ function procurementPriorityGroupsPanel() {
   ];
 
   return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">采购视角 · 物料关注顺序</span><h3>采购优先级分组</h3></div><span class="version">${rows.length} 项物料</span></div><div class="entry-grid">${groups.map(procurementPriorityGroup).join('')}</div><div class="placeholder-copy"><p>本分组仅供采购判断，不会创建采购任务或采购单；实际采购仍需人工确认。</p></div></article>`;
+}
+
+function warehouseFeedbackPlanHint(feedback) {
+  if (feedback.feedback === '暂无异常') return '暂无仓库异常提示';
+  if (feedback.feedback === '物料位置需确认') return '生产前需确认物料位置';
+  if (feedback.feedback === '包装 / 状态待确认') return '包装 / 状态待确认';
+  if (feedback.feedback === '账面库存可能不可靠') return '账面库存可能不可靠，生产前需确认可用数量';
+  if (feedback.feedback === '实物数量需复查') return '实物数量需复查';
+  return '生产前需确认可用数量';
+}
+
+function warehouseFeedbackPurchaseHint(row, feedback) {
+  if (feedback.feedback === '账面库存可能不可靠') return '建议采购关注，但不是采购申请';
+  if (feedback.feedback === '生产前需确认可用数量') return '安全库存偏低，建议提前关注供应风险';
+  if (Number(row.procurementLeadTimeDays) >= 14) return '采购周期较长，建议提前确认供应可能性';
+  return feedback.target.includes('采购') ? '建议采购关注供应风险，但不是采购申请' : '暂无采购关注提示';
+}
+
+function warehouseFeedbackReferencePanel() {
+  const rows = deliveryRiskPreview?.rows;
+  if (!rows) return '';
+  if (!rows.length) return `<article class="panel" data-warehouse-feedback-reference style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">仓库反馈 · 计划 / 采购参考</span><h3>仓库反馈提示</h3></div><span class="version">只读参考</span></div><div class="empty-table"><strong>暂无物料反馈</strong><p>当前产品尚未维护 BOM，无法同步仓库反馈提示。</p></div></article>`;
+  const feedbackRows = rows.map((row, index) => ({ row, feedback: warehouseFeedbackForRow(row, index) }));
+  return `<article class="panel table-panel" data-warehouse-feedback-reference style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">仓库反馈 · 计划 / 采购参考</span><h3>仓库反馈提示</h3></div><span class="version">${feedbackRows.length} 项 · 只读参考</span></div><div class="placeholder-copy"><p>仓库反馈仅作为计划和采购的只读参考，不会修改库存，不会改变采购建议，不会生成采购单。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料</th><th>仓库反馈</th><th>计划参考</th><th>采购参考</th><th>说明</th></tr></thead><tbody>${feedbackRows.map(({ row, feedback }) => `<tr><td><div class="cell-main"><div class="material-avatar small">${row.material.name[0]}</div><div><strong>${row.material.name}</strong><small>${row.material.code} · 库存 ${format(row.stockQty)} ${row.material.unit}</small></div></div></td><td><span class="soft-tag">${feedback.feedback}</span></td><td>${warehouseFeedbackPlanHint(feedback)}</td><td>${warehouseFeedbackPurchaseHint(row, feedback)}</td><td>${feedback.note}</td></tr>`).join('')}</tbody></table></div></article>`;
 }
 
 function deliveryRiskPreviewPanel() {
