@@ -1,5 +1,16 @@
 # Project Rules
 
+## Phase 5 Freeze 边界
+
+- Phase 5 当前稳定基线为 `b86a534 show four role information flow`，分支为 `lufuta-material-system-lite`，测试基线为 47/47 pass。
+- Phase 5 是仓库库存状态反馈与跨角色预警的只读演示冻结，不是真实业务执行能力扩展。
+- 仓库可以反馈库存状态风险，但仓库反馈不是采购申请。
+- 计划可以阅读排产前库存可用性提醒，采购可以阅读供应关注提醒，老板可以阅读交付风险和风险来源汇总。
+- 仓库反馈不得改变 MRP 计算结果、风险等级、采购建议数量或库存数量。
+- 未经 Product Owner 明确批准，不得把 Phase 5 Freeze 扩展为真实库存操作、保存行为、提交按钮、库存流水、采购单生成、权限系统或财务金额。
+- 入库、领料、退货在 Phase 5 Freeze 后仍为占位 / 演示边界。
+- 当前系统仍为只读分析与演示闭环；Phase 6 不得自动开始。
+
 ## Phase 4 Freeze 边界
 
 - Phase 4 当前稳定基线为 `c663879 add table scroll hint`，分支为 `lufuta-material-system-lite`，测试基线为 47/47 pass。
