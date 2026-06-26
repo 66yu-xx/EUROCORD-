@@ -35,9 +35,9 @@ const DELIVERY_RISK_REASONS = {
 };
 
 const pages = [
-  ['dashboard', '首页', 'grid'], ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'],
-  ['inventory', '库存台账', 'warehouse'], ['warehouse-alerts', '库存预警', 'warehouse'], ['delivery-risk', '交期风险分析', 'chart'], ['audit', '待审核流水', 'chart'], ['inbound', '入库', 'box'],
-  ['outbound', '领料', 'cart'], ['supplier-return', '供应商退货', 'warehouse'],
+  ['dashboard', '首页', 'grid'], ['delivery-risk', '交期风险分析', 'chart'], ['warehouse-alerts', '库存预警反馈', 'warehouse'],
+  ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'], ['inventory', '库存台账', 'warehouse'],
+  ['audit', '待审核流水', 'chart'], ['inbound', '入库占位', 'box'], ['outbound', '领料占位', 'cart'], ['supplier-return', '退货占位', 'warehouse'],
 ];
 
 const icons = {
