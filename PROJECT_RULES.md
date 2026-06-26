@@ -35,6 +35,14 @@
 - PDF 归档
 - 多用户登录
 
+## Phase 3 冻结边界
+
+- Phase 3 已冻结“库存预警与仓库反馈（只读）”页面，稳定基线为 `b9da4e8 polish warehouse feedback read-only copy`。
+- 仓库页面只负责发现、提示、反馈，不执行真实库存动作。
+- 页面区块固定为仓库库存概览、库存预警列表、仓库复查提示、对计划 / 采购的反馈提示。
+- 未经 Product Owner 明确批准，不得在 Phase 3 冻结范围内新增真实入库、真实领料、库存扣减、盘点或复查结果保存、采购单生成、权限登录或财务金额能力。
+- 未经 Product Owner 明确批准，不得借仓库反馈页面修改 MRP、Phase 2C 交期风险分析或采购建议逻辑。
+
 ## 协作与 Git 规则
 
 - Product Owner 明确业务方向，Developer 按蓝图和本文件实施。
