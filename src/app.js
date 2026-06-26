@@ -88,6 +88,16 @@ function demoReadingPathPanel() {
   return `<article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">DEMO READING PATH</span><h3>推荐演示路径</h3></div><span class="version">只读演示</span></div><div class="placeholder-copy"><p>建议按以下顺序查看当前 Lite 演示版，先理解角色关系，再查看订单风险和物料风险来源。</p></div><div class="entry-grid">${demoPathCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>当前版本用于演示订单到物料风险的阅读路径</strong><p>不保存操作、不修改库存、不生成采购单，也不代表正式权限系统。</p></div></article>`;
 }
 
+function roleDemoGuidePanel() {
+  const roleGuideCards = [
+    ['老板', '重点查看订单交付风险、风险来源说明，以及是否可能因为物料等待影响交期。推荐页面：首页、交期风险分析。', 'grid'],
+    ['计划', '重点查看交期是否可行、排产前是否需要确认库存可用性。推荐页面：交期风险分析、仓库反馈提示。', 'chart'],
+    ['采购', '重点查看采购优先级、采购周期、供应关注点和需要提前确认的物料。推荐页面：交期风险分析、采购优先级分组。', 'cart'],
+    ['仓库', '重点查看库存预警反馈、仓库库存状态反馈和实物可用性风险。推荐页面：库存预警反馈、库存台账。仓库反馈不是采购申请，不修改库存。', 'warehouse'],
+  ];
+  return `<article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">ROLE DEMO GUIDE</span><h3>按角色演示怎么看</h3></div><span class="version">只读演示</span></div><div class="placeholder-copy"><p>演示时可以按角色切换关注点，同一份订单物料风险结果，会被不同角色从不同角度阅读。</p></div><div class="entry-grid">${roleGuideCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>角色演示说明仅用于帮助阅读当前 Lite 演示版，不代表正式权限系统</strong><p>本阶段不会保存操作、修改库存或生成采购单。</p></div></article>`;
+}
+
 function dashboard() {
   const materials = materialService.listMaterials();
   const products = productService.listProducts();
@@ -102,6 +112,7 @@ function dashboard() {
   return `<div class="hero"><div><span class="eyebrow">PHASE 4 DEMO WALKTHROUGH</span><h2>Lufuta 物料管理系统 Lite</h2><p>订单驱动的物料风险分析 Demo，用于演示老板、计划、采购、仓库如何阅读缺料、交期与库存反馈；不是完整 ERP、WMS 或财务系统。</p></div><span class="phase-chip">只读演示 · 不执行业务</span></div>
     <div class="stats-grid">${statCard('核心演示', 2, '交期分析 / 仓库反馈', 'blue', 'chart')}${statCard('物料资料', materials.length, '演示主数据', 'violet', 'layers')}${statCard('产品 / BOM', products.length, '演示结构数据', 'blue', 'box')}${statCard('库存风险', lowStockCount, '只读预警参考', 'amber', 'warehouse')}</div>
     <article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">ROLE INFORMATION FLOW</span><h3>四角色信息流</h3></div><span class="version">只读演示</span></div><div class="placeholder-copy"><p>系统围绕同一份订单物料风险结果，让老板、计划、采购、仓库从不同角度协同判断，但本阶段仍保持只读演示边界。</p></div><div class="entry-grid">${roleFlowCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>四角色信息流仅用于演示阅读顺序，不代表权限系统</strong><p>本阶段不会保存操作、修改库存或生成采购单。</p></div></article>
+    ${roleDemoGuidePanel()}
     ${demoReadingPathPanel()}
     <div class="dashboard-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">DEMO WALKTHROUGH</span><h3>推荐演示顺序</h3></div></div><div class="flow-strip"><span>首页</span><b>→</b><span>交期风险分析</span><b>→</b><span>库存预警与仓库反馈</span><b>→</b><span>基础资料 / 执行占位</span></div><div class="entry-grid"><button class="entry-card" data-page="delivery-risk">${icon('chart', 22)}<span><strong>交期风险分析</strong><small>老板 / 计划 / 采购看订单风险与采购优先级</small></span></button><button class="entry-card" data-page="warehouse-alerts">${icon('warehouse', 22)}<span><strong>库存预警与仓库反馈</strong><small>仓库 / 计划 / 采购看预警、复查提示与反馈</small></span></button><button class="entry-card" data-page="inventory">${icon('layers', 22)}<span><strong>基础资料与占位</strong><small>库存台账等只读骨架，不代表真实执行已完成</small></span></button></div></article>
     <article class="panel"><div class="panel-head"><div><span class="kicker">PLACEHOLDER SCOPE</span><h3>基础资料与后续执行占位</h3></div><button class="text-button" data-page="audit">查看只读审核池 →</button></div><div class="flow-strip"><span>物料 / BOM</span><b>+</b><span>库存台账</span><b>+</b><span>待审核流水</span><b>+</b><span>入库 / 领料 / 退货占位</span></div><div class="placeholder-copy"><strong>当前只做演示阅读</strong><p>库存台账、待审核流水、入库、领料、供应商退货用于说明基础资料或后续执行方向；不会保存订单、扣减库存、生成采购单或生产单。</p></div></article></div>`;
