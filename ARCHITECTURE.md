@@ -1,5 +1,29 @@
 # Architecture
 
+## Phase 4 Freeze Architecture Note
+
+Phase 4 冻结的是演示可读性与移动端稳定性，不改变系统架构分层，也不扩展业务执行能力。
+
+- 稳定基线：`c663879 add table scroll hint`
+- 分支：`lufuta-material-system-lite`
+- 测试基线：47/47 pass
+- 移动端检查：375px / 390px 下 10 个页面 `pageOverflowX = 0`
+- 表格行为：页面级不横向溢出，表格内部横向滚动保持正常
+- 展示层提示：“提示：表格可左右滑动查看更多字段”
+
+架构边界保持不变：
+
+- UI 层只做展示和只读交互提示。
+- 不修改 MRP 核心计算逻辑。
+- 不新增真实库存操作。
+- 不新增保存行为。
+- 不新增采购单生成。
+- 不新增权限系统。
+- 不新增财务金额。
+- 入库、领料、退货仍为占位 / 演示边界。
+
+Phase 5 如讨论仓库侧反馈能力，应先定义库存预警反馈、盘点异常记录、补货观察入口、仓库只读 / 反馈型角色边界，再决定是否需要新的 service、storage 或后端 API 设计。
+
 ## 架构目标
 
 `Lufuta Material Management System Lite` 是一个统一入口的网页物料管理系统。目标生产架构为：

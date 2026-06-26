@@ -1,5 +1,15 @@
 # Project Rules
 
+## Phase 4 Freeze 边界
+
+- Phase 4 当前稳定基线为 `c663879 add table scroll hint`，分支为 `lufuta-material-system-lite`，测试基线为 47/47 pass。
+- Phase 4 是演示可读性与移动端稳定性冻结，不是业务功能扩展。
+- Phase 4 已完成 375px / 390px 下 10 个页面检查，所有页面 `pageOverflowX = 0`，表格内部横向滚动正常。
+- Phase 4 可包含展示层轻提示，例如：“提示：表格可左右滑动查看更多字段”。
+- 未经 Product Owner 明确批准，不得把 Phase 4 Freeze 扩展为真实库存操作、保存行为、采购单生成、权限系统、财务金额或新的业务执行流程。
+- 入库、领料、退货在 Phase 4 Freeze 后仍为占位 / 演示边界。
+- 当前系统仍是只读分析与演示闭环；MRP 核心计算逻辑不得因 Phase 4 Freeze 被修改。
+
 ## 项目定位
 
 - 项目名称：`Lufuta Material Management System Lite`（Lufuta 物料管理系统 Lite）。

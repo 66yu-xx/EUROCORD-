@@ -1,5 +1,31 @@
 # Project Status
 
+## Phase 4 Freeze - 2026-06-26
+
+- 当前稳定基线：`c663879 add table scroll hint`
+- 当前分支：`lufuta-material-system-lite`
+- 测试基线：`node --test tests/*.test.js`，47/47 pass
+- 远端同步状态：0 ahead / 0 behind
+
+Phase 4 已冻结为演示可读性与移动端稳定性基线，不是业务功能扩展。本阶段完成移动端和演示可读性检查，已在 375px / 390px 下检查 10 个页面，所有页面 `pageOverflowX = 0`，表格内部横向滚动保持正常，并新增移动端表格轻提示：
+
+```text
+提示：表格可左右滑动查看更多字段
+```
+
+Phase 4 边界：
+
+- 未修改 MRP 核心计算逻辑。
+- 未新增真实库存操作。
+- 未新增保存行为。
+- 未新增采购单生成。
+- 未新增权限系统。
+- 未新增财务金额。
+- 入库、领料、退货仍为占位 / 演示边界。
+- 当前系统仍是只读分析与演示闭环。
+
+Phase 5 可讨论仓库侧反馈能力，例如库存预警反馈、盘点异常记录、补货观察入口，以及仓库只读 / 反馈型角色边界。进入 Phase 5 前仍需单独确认范围，不能从 Phase 4 Freeze 自动延伸为业务执行能力。
+
 ## 当前状态
 
 - 项目：`Lufuta Material Management System Lite`
