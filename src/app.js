@@ -466,12 +466,16 @@ function warehouseFeedbackPurchaseHint(row, feedback) {
   return target.includes('采购') ? '建议采购关注供应风险，但不是采购申请' : '暂无采购关注提示';
 }
 
+function safeDisplayText(value, fallback) {
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
 function warehouseFeedbackReferencePanel() {
   const rows = deliveryRiskPreview?.rows;
   if (!rows) return '';
   if (!rows.length) return `<article class="panel" data-warehouse-feedback-reference style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">仓库反馈 · 计划 / 采购参考</span><h3>仓库反馈提示</h3></div><span class="version">只读参考</span></div><div class="empty-table"><strong>暂无物料反馈</strong><p>当前产品尚未维护 BOM，无法同步仓库反馈提示。</p></div></article>`;
   const feedbackRows = rows.map((row, index) => ({ row, feedback: warehouseFeedbackForRow(row, index) }));
-  return `<article class="panel table-panel" data-warehouse-feedback-reference style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">仓库反馈 · 本单库存可信度参考</span><h3>仓库反馈提示</h3></div><span class="version">${feedbackRows.length} 项 · 只读参考</span></div><div class="placeholder-copy"><p>本区用于判断 HE-110S 小型款 300 台急单中，哪些库存数据需要仓库现场确认。仓库反馈仅作为计划和采购的只读参考，不会修改库存，不会改变采购建议，不会生成采购单。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料</th><th>仓库反馈</th><th>计划参考</th><th>采购参考</th><th>说明</th></tr></thead><tbody>${feedbackRows.map(({ row, feedback }) => `<tr><td><div class="cell-main"><div class="material-avatar small">${row.material.name[0]}</div><div><strong>${row.material.name}</strong><small>${row.material.code} · 库存 ${format(row.stockQty)} ${row.material.unit}</small></div></div></td><td><span class="soft-tag">${feedback.feedback}</span></td><td>${warehouseFeedbackPlanHint(feedback)}</td><td>${warehouseFeedbackPurchaseHint(row, feedback)}</td><td>${feedback.note}</td></tr>`).join('')}</tbody></table></div></article>`;
+  return `<article class="panel table-panel" data-warehouse-feedback-reference style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">仓库反馈 · 本单库存可信度参考</span><h3>仓库反馈提示</h3></div><span class="version">${feedbackRows.length} 项 · 只读参考</span></div><div class="placeholder-copy"><p>本区用于判断 HE-110S 小型款 300 台急单中，哪些库存数据需要仓库现场确认。仓库反馈仅作为计划和采购的只读参考，不会修改库存，不会改变采购建议，不会生成采购单。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料</th><th>仓库反馈</th><th>计划参考</th><th>采购参考</th><th>说明</th></tr></thead><tbody>${feedbackRows.map(({ row, feedback }) => { const feedbackText = safeDisplayText(feedback.feedback, safeDisplayText(feedback.feedbackStatus, '暂无仓库反馈')); const noteText = safeDisplayText(feedback.note, safeDisplayText(feedback.audienceHint, '暂无补充说明')); return `<tr><td><div class="cell-main"><div class="material-avatar small">${row.material.name[0]}</div><div><strong>${row.material.name}</strong><small>${row.material.code} · 库存 ${format(row.stockQty)} ${row.material.unit}</small></div></div></td><td><span class="soft-tag">${feedbackText}</span></td><td>${warehouseFeedbackPlanHint(feedback)}</td><td>${warehouseFeedbackPurchaseHint(row, feedback)}</td><td>${noteText}</td></tr>`; }).join('')}</tbody></table></div></article>`;
 }
 
 function deliveryRiskPreviewPanel() {
