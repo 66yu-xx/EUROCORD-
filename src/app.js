@@ -64,6 +64,7 @@ function isValidDateInputValue(value) {
 const pages = [
   ['dashboard', '首页', 'grid'], ['delivery-risk', '交期风险分析', 'chart'], ['warehouse-alerts', '库存预警反馈', 'warehouse'],
   ['order-evaluations', '订单评估记录', 'chart'],
+  ['real-data-trial', '真实数据试算', 'layers'],
   ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'], ['inventory', '库存台账', 'warehouse'],
   ['audit', '待审核流水', 'chart'], ['inbound', '入库占位', 'box'], ['outbound', '领料占位', 'cart'], ['supplier-return', '退货占位', 'warehouse'],
 ];
@@ -263,6 +264,34 @@ function orderEvaluationDetailPage() {
   const backToListButton = '<div data-order-evaluation-backline style="margin-bottom:14px"><button class="secondary" type="button" data-action="back-order-evaluations">← 返回订单评估记录列表</button></div>';
 
   return `${backToListButton}${skeletonNotice('订单评估记录详情', '当前页面用于回看一次订单评估记录，不代表正式接单。该记录不会占用库存，不会生成采购单，不会进入财务核算。')}<article class="panel" data-order-evaluation-detail style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ORDER EVALUATION DETAIL</span><h3>${record.id || '待编号'}</h3></div><button class="secondary" data-action="back-order-evaluations">返回订单评估记录列表</button></div><div class="placeholder-form"><div><span>评估编号</span><strong>${record.id || '待编号'}</strong></div><div><span>状态</span><strong>${orderEvaluationStatusLabel(record.status)}</strong></div><div><span>产品</span><strong>${productLabel}</strong></div><div><span>数量</span><strong>${format(record.input?.plannedQty || 0)} 台</strong></div><div><span>期望交期</span><strong>${record.input?.requiredDate || '待确认'}</strong></div><div><span>分析日期</span><strong>${record.input?.asOfDate || '待确认'}</strong></div><div><span>创建时间</span><strong>${record.createdAt || '待确认'}</strong></div><div><span>更新时间</span><strong>${record.updatedAt || '待确认'}</strong></div><div><span>备注</span><strong>${record.input?.note || '暂无备注'}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">SUMMARY</span><h3>分析摘要</h3></div><span class="version">只读快照</span></div><div class="placeholder-form"><div><span>风险等级</span><strong>${orderEvaluationRiskLabel(record.summary?.riskLevel)}</strong></div><div><span>是否可满足交期</span><strong>${record.summary?.canMeetRequiredDate ? '可以满足' : '暂不建议直接承诺'}</strong></div><div><span>关键风险物料数量</span><strong>${format(record.summary?.keyRiskMaterialCount || 0)}</strong></div><div><span>需采购确认数量</span><strong>${format(record.summary?.procurementConfirmCount || 0)}</strong></div><div><span>需仓库确认数量</span><strong>${format(record.summary?.warehouseConfirmCount || 0)}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ANALYSIS SNAPSHOT</span><h3>分析快照</h3></div><span class="version">${snapshot.source || '未知来源'}</span></div><div class="placeholder-form"><div><span>快照生成时间</span><strong>${snapshot.generatedAt || '待确认'}</strong></div><div><span>来源</span><strong>${snapshot.source || '待确认'}</strong></div><div><span>物料风险明细</span><strong>${snapshotEmptyText(snapshot.materialRisks, '物料风险明细')}</strong></div><div><span>采购建议快照</span><strong>${snapshotEmptyText(snapshot.procurementRecommendations, '采购建议')}</strong></div><div><span>仓库反馈提示</span><strong>${snapshotEmptyText(snapshot.warehouseFeedbackHints, '仓库反馈提示')}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BUSINESS BOUNDARY</span><h3>业务边界</h3></div><span class="version">演示记录 · 不触发业务联动</span></div><div class="entry-grid">${boundaryCards.map(([title, value]) => `<div class="entry-card">${icon('grid', 22)}<span><strong>${title}</strong><small>${value}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>本记录为演示评估记录，不是用户真实保存的订单评估。</p><p>本详情页只用于回看静态评估记录，不提供保存、编辑、删除、重新分析或真实业务操作。</p></div></article>`;
+}
+
+function realDataTrialPage() {
+  const futureInputs = [
+    ['订单条件', '产品、试算数量、期望交期和试算日期。', 'chart'],
+    ['BOM', '产品对应物料清单和单位用量。', 'git'],
+    ['库存', '当前库存、安全库存和可用性确认。', 'warehouse'],
+    ['采购周期', '物料补货周期和到料时间判断。', 'cart'],
+    ['参考价格', '仅用于采购金额参考和成本影响参考。', 'layers'],
+  ];
+  const futureOutputs = [
+    ['缺料结果', '识别总需求、当前库存和缺口数量。', 'layers'],
+    ['交期风险', '判断采购周期和期望交期是否紧张。', 'chart'],
+    ['采购建议', '提示立即确认采购、建议关注或暂不采购。', 'cart'],
+    ['采购金额参考', '基于参考单价和建议采购数量估算资金压力。', 'grid'],
+    ['成本参考', '只做成本影响参考，不进入正式成本核算。', 'box'],
+    ['仓库确认点', '提示缺料、低安全库存和需现场盘点项目。', 'warehouse'],
+  ];
+  const boundaryItems = [
+    ['不保存正式订单', '当前不会创建、保存或编辑真实客户订单。', 'grid'],
+    ['不影响库存', '当前不会占用、扣减、锁定或修改任何库存。', 'warehouse'],
+    ['不生成采购单', '当前不会生成采购申请、采购单或付款申请。', 'cart'],
+    ['不进入财务', '当前不会进入应付账款、财务凭证或正式财务模块。', 'chart'],
+    ['不做正式成本核算', '当前不会计算正式订单成本、产品成本、利润或毛利。', 'box'],
+    ['不接入真实输入', '当前不提供订单、BOM、库存或价格导入和保存。', 'layers'],
+  ];
+
+  return `${skeletonNotice('真实数据试算', '这里将用于未来输入或导入真实业务数据，进行一次性试算，帮助判断缺料、交期、采购、金额和仓库确认点。当前仅开放入口和边界说明，不接入真实输入、导入、保存或计算。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 2</span><h3>真实数据试算入口</h3></div><span class="version">入口说明 · 暂不计算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：未来可输入或导入订单、BOM、库存、采购周期、参考价格等数据，生成一次性试算结果。</p><p>当前阶段只说明入口和边界，不提供输入表单、导入、保存、重新分析或真实业务联动。</p></div></article><article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>未来试算链路</h3><div class="workflow-steps"><span>订单条件</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>+</b><span>参考价格</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>采购金额参考</span><b>+</b><span>成本参考</span><b>+</b><span>仓库确认点</span></div><p>链路仅用于说明未来能力，不代表当前已经接入真实试算计算。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">FUTURE INPUTS</span><h3>未来输入 / 导入数据</h3></div><span class="version">${futureInputs.length} 类数据</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">不保存 · 不占用 · 不生成 · 不进财务</span></div><div class="placeholder-copy"><p>当前仅为 Phase 8-Step 2 页面入口，不保存正式订单，不占用库存，不扣减库存，不生成采购单，不生成付款申请，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">FUTURE OUTPUTS</span><h3>未来输出预告</h3></div><span class="version">${futureOutputs.length} 类结果</span></div><div class="entry-grid">${futureOutputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>以上输出仅为未来方向说明。当前页面不会运行 MRP、交期风险、采购建议、金额参考或成本参考计算。</p></div></article></div>`;
 }
 
 function warehouseFeedbackForRow(row, index) {
@@ -635,6 +664,7 @@ function render() {
     'delivery-risk': deliveryRiskPage,
     'order-evaluations': orderEvaluationsPage,
     'order-evaluation-detail': orderEvaluationDetailPage,
+    'real-data-trial': realDataTrialPage,
     audit: auditPage,
     inbound: () => documentPlaceholder('入库占位', '后续可记录到货入库方向', '当前不提供入库单填写、保存、审核或库存增加。'),
     outbound: () => documentPlaceholder('领料占位', '后续可记录领料出库方向', '当前不提供领料单填写、保存、审核或库存扣减。'),
