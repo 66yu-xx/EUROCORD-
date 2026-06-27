@@ -161,14 +161,20 @@ function dashboard() {
   const products = productService.listProducts();
   const balances = inventoryService.listBalances();
   const lowStockCount = balances.filter((row) => Number(row.stockQty) < Number(row.safetyStock)).length;
-  const roleFlowCards = [
-    ['老板', '查看订单交付风险、风险来源和是否可能等待物料。', 'grid'],
-    ['计划', '判断交期是否可行，排产前是否需要确认库存可用性。', 'chart'],
-    ['采购', '查看采购优先级、供应关注点和需要提前确认的物料。', 'cart'],
-    ['仓库', '反馈库存状态、实物可用性和盘点关注点，但不提出采购申请。', 'warehouse'],
+  const demoEntryCards = [
+    ['默认演示场景', 'HE-110S 小型款 / 300 台 / 当前日期 + 15 天交付', 'box'],
+    ['订单场景分析', '在交期风险分析页输入场景，不是正式订单保存入口。', 'chart'],
+    ['只读演示边界', '不保存真实订单、不生成采购单、不修改库存、不做权限、不做财务金额。', 'warehouse'],
   ];
-  return `<div class="hero"><div><span class="eyebrow">PHASE 4 DEMO WALKTHROUGH</span><h2>Lufuta 物料管理系统 Lite</h2><p>订单驱动的物料风险分析 Demo，用于演示老板、计划、采购、仓库如何阅读缺料、交期与库存反馈；不是完整 ERP、WMS 或财务系统。</p></div><span class="phase-chip">只读演示 · 不执行业务</span></div>
-    <div class="stats-grid">${statCard('核心演示', 2, '交期分析 / 仓库反馈', 'blue', 'chart')}${statCard('物料资料', materials.length, '演示主数据', 'violet', 'layers')}${statCard('产品 / BOM', products.length, '演示结构数据', 'blue', 'box')}${statCard('库存风险', lowStockCount, '只读预警参考', 'amber', 'warehouse')}</div>
+  const roleFlowCards = [
+    ['老板', '看这张单能不能承诺交付，风险是否需要当天拍板。', 'grid'],
+    ['计划', '看库存和采购周期能不能支撑排产与 15 天交付。', 'chart'],
+    ['采购', '看今天要确认哪些关键物料、供应周期和可采购数量。', 'cart'],
+    ['仓库', '看哪些账面库存需要现场复核，避免误判可用数量。', 'warehouse'],
+  ];
+  return `<div class="hero"><div><span class="eyebrow">LUFUTA LITE / DEMO ENTRY</span><h2>客户订单来了，先看交期风险</h2><p>用一个订单场景，联动 BOM、库存、采购周期和仓库反馈，提前判断交付风险。当前 Lite 版本主线是交期风险分析，不是完整 ERP 或正式订单系统。</p><button class="primary large" data-page="delivery-risk" style="margin-top:18px">${icon('chart', 18)} 进入交期风险分析</button></div><span class="phase-chip">当前为只读演示</span></div>
+    <div class="stats-grid">${statCard('核心入口', '交期风险分析', '查看演示订单风险', 'blue', 'chart')}${statCard('物料资料', materials.length, '演示主数据', 'violet', 'layers')}${statCard('产品 / BOM', products.length, '演示结构数据', 'blue', 'box')}${statCard('库存风险', lowStockCount, '只读预警参考', 'amber', 'warehouse')}</div>
+    <article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">DEMO ENTRY</span><h3>当前演示主线</h3></div><button class="primary" data-page="delivery-risk">${icon('chart', 17)} 进入交期风险分析</button></div><div class="placeholder-copy"><p>客户提出订单需求后，先进入交期风险分析，看物料和交付风险。当前默认场景只是用于演示阅读链路，不代表真实订单已保存。</p></div><div class="entry-grid">${demoEntryCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>
     ${demoOrderStoryPanel()}
     ${demoOrderDecisionPanel()}
     <article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">ROLE INFORMATION FLOW</span><h3>四角色信息流</h3></div><span class="version">只读演示</span></div><div class="placeholder-copy"><p>系统围绕同一份订单物料风险结果，让老板、计划、采购、仓库从不同角度协同判断，但本阶段仍保持只读演示边界。</p></div><div class="entry-grid">${roleFlowCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>四角色信息流仅用于演示阅读顺序，不代表权限系统</strong><p>本阶段不会保存操作、修改库存或生成采购单。</p></div></article>
