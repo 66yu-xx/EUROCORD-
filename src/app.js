@@ -27,6 +27,9 @@ const DEMO_DELIVERY_RISK_ORDER = {
 };
 const deliveryRiskInputState = getDemoDeliveryRiskDefaults();
 let deliveryRiskPreview = null;
+const realDataTrialInputState = { selectedProductId: '', plannedQty: '', requiredDate: '', asOfDate: formatDateInputValue(new Date()) };
+let realDataTrialPreview = null;
+let realDataTrialError = '';
 const DELIVERY_RISK_LABELS = { ok: '可满足', warning: '交期紧张', critical: '交期高风险', unknown: '无法判断' };
 const DELIVERY_RISK_REASONS = {
   ok: '采购周期可满足期望交期',
@@ -59,6 +62,45 @@ function getDemoDeliveryRiskDefaults(baseDate = new Date()) {
 
 function isValidDateInputValue(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function buildTrialRowsFromExistingData({ product, plannedQty, requiredDate, asOfDate }) {
+  const materials = materialService.listMaterials();
+  const balances = inventoryService.listBalances();
+  return productService.listBOMItems(product.id).map((item) => {
+    const material = materials.find((candidate) => candidate.id === item.materialId);
+    const inventoryBalance = balances.find((balance) => balance.materialId === item.materialId);
+    return {
+      material,
+      qtyPerProduct: Number(item.qtyPerProduct),
+      requiredQty: Number(item.qtyPerProduct) * plannedQty,
+      stockQty: Number(inventoryBalance?.stockQty ?? 0),
+      safetyStock: Number(inventoryBalance?.safetyStock ?? 0),
+      procurementLeadTimeDays: resolveProcurementLeadTimeDays(material, inventoryBalance),
+    };
+  }).filter((row) => row.material).map((row) => {
+    const risk = calculateProcurementRisk({
+      requiredQty: row.requiredQty,
+      stockQty: row.stockQty,
+      safetyStock: row.safetyStock,
+      procurementLeadTimeDays: row.procurementLeadTimeDays,
+      requiredDate,
+      asOfDate,
+    });
+    const resultRow = {
+      ...row,
+      shortageQty: risk.shortageQty,
+      remainingQty: risk.remainingQty,
+      riskLevel: risk.riskLevel,
+      quantityRisk: risk.quantityRisk,
+      mustOrderNow: risk.mustOrderNow,
+      latestOrderDate: risk.latestOrderDate,
+      expectedArrivalDate: risk.expectedArrivalDate,
+      deliveryRiskLabel: risk.shortageQty === 0 ? '可满足' : DELIVERY_RISK_LABELS[risk.riskLevel],
+      deliveryRiskReason: risk.shortageQty === 0 ? '库存可覆盖本次需求' : DELIVERY_RISK_REASONS[risk.riskLevel],
+    };
+    return { ...resultRow, recommendation: buildProcurementRecommendation(resultRow) };
+  });
 }
 
 const pages = [
@@ -266,7 +308,41 @@ function orderEvaluationDetailPage() {
   return `${backToListButton}${skeletonNotice('订单评估记录详情', '当前页面用于回看一次订单评估记录，不代表正式接单。该记录不会占用库存，不会生成采购单，不会进入财务核算。')}<article class="panel" data-order-evaluation-detail style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ORDER EVALUATION DETAIL</span><h3>${record.id || '待编号'}</h3></div><button class="secondary" data-action="back-order-evaluations">返回订单评估记录列表</button></div><div class="placeholder-form"><div><span>评估编号</span><strong>${record.id || '待编号'}</strong></div><div><span>状态</span><strong>${orderEvaluationStatusLabel(record.status)}</strong></div><div><span>产品</span><strong>${productLabel}</strong></div><div><span>数量</span><strong>${format(record.input?.plannedQty || 0)} 台</strong></div><div><span>期望交期</span><strong>${record.input?.requiredDate || '待确认'}</strong></div><div><span>分析日期</span><strong>${record.input?.asOfDate || '待确认'}</strong></div><div><span>创建时间</span><strong>${record.createdAt || '待确认'}</strong></div><div><span>更新时间</span><strong>${record.updatedAt || '待确认'}</strong></div><div><span>备注</span><strong>${record.input?.note || '暂无备注'}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">SUMMARY</span><h3>分析摘要</h3></div><span class="version">只读快照</span></div><div class="placeholder-form"><div><span>风险等级</span><strong>${orderEvaluationRiskLabel(record.summary?.riskLevel)}</strong></div><div><span>是否可满足交期</span><strong>${record.summary?.canMeetRequiredDate ? '可以满足' : '暂不建议直接承诺'}</strong></div><div><span>关键风险物料数量</span><strong>${format(record.summary?.keyRiskMaterialCount || 0)}</strong></div><div><span>需采购确认数量</span><strong>${format(record.summary?.procurementConfirmCount || 0)}</strong></div><div><span>需仓库确认数量</span><strong>${format(record.summary?.warehouseConfirmCount || 0)}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ANALYSIS SNAPSHOT</span><h3>分析快照</h3></div><span class="version">${snapshot.source || '未知来源'}</span></div><div class="placeholder-form"><div><span>快照生成时间</span><strong>${snapshot.generatedAt || '待确认'}</strong></div><div><span>来源</span><strong>${snapshot.source || '待确认'}</strong></div><div><span>物料风险明细</span><strong>${snapshotEmptyText(snapshot.materialRisks, '物料风险明细')}</strong></div><div><span>采购建议快照</span><strong>${snapshotEmptyText(snapshot.procurementRecommendations, '采购建议')}</strong></div><div><span>仓库反馈提示</span><strong>${snapshotEmptyText(snapshot.warehouseFeedbackHints, '仓库反馈提示')}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BUSINESS BOUNDARY</span><h3>业务边界</h3></div><span class="version">演示记录 · 不触发业务联动</span></div><div class="entry-grid">${boundaryCards.map(([title, value]) => `<div class="entry-card">${icon('grid', 22)}<span><strong>${title}</strong><small>${value}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>本记录为演示评估记录，不是用户真实保存的订单评估。</p><p>本详情页只用于回看静态评估记录，不提供保存、编辑、删除、重新分析或真实业务操作。</p></div></article>`;
 }
 
+function realDataTrialSafetyStatus(row) {
+  if (row.shortageQty > 0) return '库存不足';
+  if (row.quantityRisk === 'low') return '余量低于安全库存';
+  return '安全库存可覆盖';
+}
+
+function realDataTrialWarehousePoints(rows) {
+  const points = [];
+  rows.forEach((row) => {
+    if (row.shortageQty > 0) points.push(`${row.material.name}：缺料 ${format(row.shortageQty)} ${row.material.unit}`);
+    else if (row.quantityRisk === 'low') points.push(`${row.material.name}：库存覆盖但余量不足`);
+    if (row.procurementLeadTimeDays === null) points.push(`${row.material.name}：采购周期缺失或数据待确认`);
+  });
+  return points.length ? points : ['当前试算未发现需要仓库优先确认的物料。'];
+}
+
+function realDataTrialResultPanel() {
+  if (!realDataTrialPreview) return '';
+
+  const { product, plannedQty, requiredDate, asOfDate, rows } = realDataTrialPreview;
+  const summary = `<article class="panel" data-real-data-trial-result style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL RESULT</span><h3>一次性试算结果</h3></div><span class="version">${product.code} · 当前页面结果</span></div><div class="placeholder-form"><div><span>产品</span><strong>${product.code} · ${product.name} · ${product.model}</strong></div><div><span>试算数量</span><strong>${format(plannedQty)} 台</strong></div><div><span>期望交期</span><strong>${requiredDate}</strong></div><div><span>试算日期</span><strong>${asOfDate}</strong></div><div><span>数据来源</span><strong>系统现有产品 / BOM / 库存 / 采购周期</strong></div></div><div class="placeholder-copy"><p>本结果只保存在当前页面状态中，不保存正式订单，不保存订单评估记录，不占用或扣减库存，不生成采购单。</p></div></article>`;
+  if (!rows.length) return `<div data-real-data-trial-results>${summary}<article class="panel" style="margin-bottom:18px"><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成试算结果</strong><p>请先确认系统现有产品 BOM 资料。本页面不会导入 BOM，也不会修改正式 BOM。</p></div></article></div>`;
+
+  const shortageRows = rows.filter((row) => row.shortageQty > 0 || row.quantityRisk === 'low');
+  const scrollWrapStyle = 'width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain';
+  const shortageTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">SHORTAGE RESULT</span><h3>缺料结果</h3></div><span class="version">${rows.length} 项物料</span></div>${tableScrollHint()}<div class="table-wrap" style="${scrollWrapStyle}"><table style="min-width:760px"><thead><tr><th>物料</th><th>单位用量</th><th>总需求</th><th>当前库存</th><th>缺口数量</th><th>安全库存状态</th></tr></thead><tbody>${rows.map((row) => `<tr><td><strong class="code">${row.material.code}</strong><br>${row.material.name}</td><td>${format(row.qtyPerProduct)} ${row.material.unit}</td><td><strong>${format(row.requiredQty)}</strong> ${row.material.unit}</td><td>${format(row.stockQty)} ${row.material.unit}</td><td><strong class="${row.shortageQty > 0 ? 'danger-text' : 'muted'}">${format(row.shortageQty)}</strong> ${row.material.unit}</td><td><span class="soft-tag">${realDataTrialSafetyStatus(row)}</span></td></tr>`).join('')}</tbody></table></div></article>`;
+  const riskTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">DELIVERY RISK</span><h3>交期风险</h3></div><span class="version">只读判断</span></div>${tableScrollHint()}<div class="table-wrap" style="${scrollWrapStyle}"><table style="min-width:860px"><thead><tr><th>物料</th><th>库存是否可覆盖</th><th>采购周期是否足够</th><th>预计到料时间</th><th>风险等级</th><th>风险原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.shortageQty > 0 ? '库存不足' : '库存可覆盖'}</td><td>${row.procurementLeadTimeDays === null ? '采购周期缺失，需人工确认' : row.riskLevel === 'critical' ? '预计不足' : '当前判断可参考'}</td><td>${row.expectedArrivalDate || (row.procurementLeadTimeDays === null ? '待确认' : '无需采购')}</td><td><span class="soft-tag">${row.deliveryRiskLabel}</span></td><td>${row.deliveryRiskReason}</td></tr>`).join('')}</tbody></table></div></article>`;
+  const recommendationTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">PROCUREMENT SUGGESTION</span><h3>采购建议</h3></div><span class="version">不生成采购单</span></div><div class="placeholder-copy"><p>采购建议只用于本次试算阅读，不保存建议，不生成采购单，不进入采购流程。</p></div>${tableScrollHint()}<div class="table-wrap" style="${scrollWrapStyle}"><table style="min-width:780px"><thead><tr><th>物料</th><th>建议动作</th><th>建议采购数量</th><th>优先级</th><th>原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.recommendation.action}</td><td><strong>${format(row.recommendation.recommendedQty)}</strong> ${row.material.unit}</td><td><span class="soft-tag">${row.recommendation.priority}</span></td><td>${row.recommendation.reason}</td></tr>`).join('')}</tbody></table></div></article>`;
+  const warehousePoints = `<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE CHECK</span><h3>仓库确认点</h3></div><span class="version">${shortageRows.length} 项关注</span></div><div class="entry-grid">${realDataTrialWarehousePoints(rows).map((point) => `<div class="entry-card">${icon('warehouse', 22)}<span><strong>${point}</strong><small>仅提示人工确认，不修改库存台账。</small></span></div>`).join('')}</div></article>`;
+  return `<div data-real-data-trial-results>${summary}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}</div>`;
+}
+
 function realDataTrialPage() {
+  const products = productService.listProducts();
+  const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === realDataTrialInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name} · ${product.model}</option>`).join('');
   const futureInputs = [
     ['订单条件', '产品、试算数量、期望交期和试算日期。', 'chart'],
     ['BOM', '产品对应物料清单和单位用量。', 'git'],
@@ -274,39 +350,18 @@ function realDataTrialPage() {
     ['采购周期', '物料补货周期和到料时间判断。', 'cart'],
     ['参考价格', '仅用于采购金额参考和成本影响参考。', 'layers'],
   ];
-  const futureOutputs = [
-    ['缺料结果', '识别总需求、当前库存和缺口数量。', 'layers'],
-    ['交期风险', '判断采购周期和期望交期是否紧张。', 'chart'],
-    ['采购建议', '提示立即确认采购、建议关注或暂不采购。', 'cart'],
-    ['采购金额参考', '基于参考单价和建议采购数量估算资金压力。', 'grid'],
-    ['成本参考', '只做成本影响参考，不进入正式成本核算。', 'box'],
-    ['仓库确认点', '提示缺料、低安全库存和需现场盘点项目。', 'warehouse'],
-  ];
   const boundaryItems = [
-    ['不保存正式订单', '当前不会创建、保存或编辑真实客户订单。', 'grid'],
+    ['不保存正式订单', '当前不会创建、保存或编辑真实客户订单，也不会保存订单评估记录。', 'grid'],
     ['不影响库存', '当前不会占用、扣减、锁定或修改任何库存。', 'warehouse'],
     ['不生成采购单', '当前不会生成采购申请、采购单或付款申请。', 'cart'],
     ['不进入财务', '当前不会进入应付账款、财务凭证或正式财务模块。', 'chart'],
     ['不做正式成本核算', '当前不会形成正式成本结果，也不会计算利润或毛利。', 'box'],
-    ['不接入真实输入', '当前不提供订单、BOM、库存或价格导入和保存。', 'layers'],
+    ['不导入新数据', '当前只读取系统现有产品、BOM、库存和采购周期，不导入 BOM、库存或价格。', 'layers'],
   ];
-  const trialConditionSections = [
-    ['订单条件', ['产品 / BOM 来源', '试算数量', '期望交期', '试算日期', '客户需求说明'], 'chart'],
-    ['数据来源', ['BOM 来源：系统现有 BOM / 临时导入 BOM / 手动临时输入', '库存来源：系统当前库存 / 临时库存表 / 待仓库确认', '采购周期来源：物料资料 / 供应商确认 / 待维护', '参考价格来源：未维护 / 待确认 / 未来演示参考价'], 'layers'],
-    ['数据状态', ['使用系统现有资料', '使用临时试算数据', '数据待确认', '价格未维护', '库存待仓库确认', 'BOM 待确认'], 'warehouse'],
-  ];
-  const resultPreviewSections = [
-    ['试算条件摘要', ['产品', '试算数量', '期望交期', '试算日期', '数据来源'], 'grid'],
-    ['缺料结果', ['物料', '单位用量', '总需求', '当前库存', '缺口数量', '安全库存状态'], 'layers'],
-    ['交期风险', ['库存是否可覆盖', '采购周期是否足够', '预计到料时间', '期望交期是否紧张', '风险等级', '风险原因'], 'chart'],
-    ['采购建议', ['立即确认采购', '建议关注', '暂不采购', '采购周期缺失，需人工确认', '建议采购数量'], 'cart'],
-    ['金额与成本参考', ['参考单价：待维护', '建议采购数量：待试算', '采购金额参考：待试算', '成本影响参考：待确认', '价格状态：未维护 / 待确认'], 'box'],
-    ['仓库确认点', ['缺料物料', '库存低于安全库存的物料', '库存刚好覆盖但余量不足的物料', '需要现场盘点的物料', '物料状态待确认的项目'], 'warehouse'],
-  ];
-  const trialConditionPlaceholder = `<article class="panel" data-real-data-trial-conditions style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL CONDITIONS</span><h3>试算条件与数据来源</h3></div><span class="version">静态占位 · 暂不读取</span></div><div class="placeholder-copy"><p>以下只说明未来进行真实数据试算时，用户需要提供哪些试算条件和数据来源。</p><p>当前阶段这些内容只是未来输入区占位，不是真实输入表单；当前不会读取、保存、导入或计算这些数据。</p></div><div class="entry-grid">${trialConditionSections.map(([title, items, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong>${items.map((item) => `<small>${item}</small>`).join('')}</span></div>`).join('')}</div></article>`;
-  const resultPreview = `<article class="panel" data-real-data-trial-result-preview style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">RESULT PREVIEW</span><h3>未来试算结果结构</h3></div><span class="version">静态骨架 · 暂不计算</span></div><div class="placeholder-copy"><p>以下只展示未来一次性试算结果会包含哪些判断区域。当前没有接入真实输入、价格数据或计算逻辑，不会生成任何业务单据。</p></div><div class="entry-grid">${resultPreviewSections.map(([title, items, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong>${items.map((item) => `<small>${item}</small>`).join('')}</span></div>`).join('')}</div><div class="placeholder-copy"><p>金额与成本参考区当前只展示占位状态：没有接入价格数据，不计算采购金额，不形成正式成本，不进入财务。</p></div></article>`;
+  const amountCostPlaceholder = `<article class="panel" data-real-data-trial-amount-cost style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">AMOUNT / COST</span><h3>金额与成本参考</h3></div><span class="version">占位状态 · 不进财务</span></div><div class="placeholder-form"><div><span>参考单价</span><strong>待维护</strong></div><div><span>建议采购数量</span><strong>待试算 / 由后续阶段接入</strong></div><div><span>采购金额参考</span><strong>待试算</strong></div><div><span>成本影响参考</span><strong>待确认</strong></div><div><span>价格状态</span><strong>未维护 / 待确认</strong></div></div><div class="placeholder-copy"><p>当前没有接入价格数据，不计算采购金额，不形成正式成本，不进入财务。</p></div></article>`;
+  const trialForm = `<article class="panel" data-real-data-trial-form style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">REAL DATA TRIAL</span><h3>一次性试算条件</h3></div><span class="version">使用系统现有资料</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-real-data-trial-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>试算数量</span><input name="plannedQty" type="number" min="1" step="1" placeholder="请输入数量" value="${realDataTrialInputState.plannedQty}" data-real-data-trial-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${realDataTrialInputState.requiredDate}" data-real-data-trial-input /></label><label class="field"><span>试算日期</span><input name="asOfDate" type="date" value="${realDataTrialInputState.asOfDate}" data-real-data-trial-input /></label></div>${realDataTrialError ? `<div class="placeholder-copy" data-real-data-trial-error><p class="danger-text">${realDataTrialError}</p></div>` : ''}<div class="placeholder-copy"><p>本区只使用系统现有产品、BOM、库存和采购周期做当前页面一次性试算；不支持手动新增产品，不导入 BOM、库存或价格。</p></div><div class="modal-actions"><button class="primary" type="button" data-action="run-real-data-trial">${icon('chart', 17)} 开始试算</button></div></article>`;
 
-  return `${skeletonNotice('真实数据试算', '这里将用于未来输入或导入真实业务数据，进行一次性试算，帮助判断缺料、交期、采购、金额和仓库确认点。当前仅开放入口和边界说明，不接入真实输入、导入、保存或计算。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 4</span><h3>真实数据试算入口</h3></div><span class="version">入口说明 · 暂不计算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：未来可输入或导入订单、BOM、库存、采购周期、参考价格等数据，生成一次性试算结果。</p><p>当前阶段只说明入口、边界、未来试算条件和未来结果结构，不提供输入表单、导入、保存、重新分析或真实业务联动。</p></div></article><article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>未来试算链路</h3><div class="workflow-steps"><span>订单条件</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>+</b><span>参考价格</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>采购金额参考</span><b>+</b><span>成本参考</span><b>+</b><span>仓库确认点</span></div><p>链路仅用于说明未来能力，不代表当前已经接入真实试算计算。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">FUTURE INPUTS</span><h3>未来输入 / 导入数据</h3></div><span class="version">${futureInputs.length} 类数据</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">不保存 · 不占用 · 不生成 · 不进财务</span></div><div class="placeholder-copy"><p>当前仅为 Phase 8-Step 4 页面静态占位，不保存正式订单，不占用库存，不扣减库存，不生成采购单，不生成付款申请，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialConditionPlaceholder}${resultPreview}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">FUTURE OUTPUTS</span><h3>未来输出预告</h3></div><span class="version">${futureOutputs.length} 类结果</span></div><div class="entry-grid">${futureOutputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>以上输出仅为未来方向说明。当前页面不会运行 MRP、交期风险、采购建议、金额参考或成本参考计算。</p></div></article></div>`;
+  return `${skeletonNotice('真实数据试算', '这里用于基于系统现有产品、BOM、库存和采购周期做一次性试算，帮助判断缺料、交期、采购建议和仓库确认点。当前不导入新数据，不保存订单，不修改库存，不生成采购单，不进入财务。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 6</span><h3>真实数据试算入口</h3></div><span class="version">最小闭环 · 当前页面试算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：先选择系统现有产品，输入试算数量、期望交期和试算日期，再读取系统现有 BOM、库存和采购周期生成一次性试算结果。</p><p>本步骤不是正式订单模块，不保存正式订单或订单评估记录，不占用或扣减库存，不生成采购单，也不进入财务。</p></div></article><article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>当前试算链路</h3><div class="workflow-steps"><span>系统现有产品</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>仓库确认点</span></div><p>链路只在当前页面运行，不保存、不占用、不扣减、不生成、不进入财务。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">不保存 · 不占用 · 不生成 · 不进财务</span></div><div class="placeholder-copy"><p>当前试算不会保存正式订单，不保存订单评估记录，不占用库存，不扣减库存，不生成采购单，不生成付款申请，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialForm}${realDataTrialResultPanel()}${amountCostPlaceholder}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE</span><h3>试算条件与数据来源</h3></div><span class="version">${futureInputs.length} 类资料</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>当前阶段不读取临时导入文件，不写入正式基础资料；如需导入 BOM、库存或价格，应进入后续阶段单独设计。</p></div></article></div>`;
 }
 
 function warehouseFeedbackForRow(row, index) {
@@ -709,6 +764,13 @@ function bindEvents() {
     const priorityGroups = document.querySelector('[data-procurement-priority-groups]');
     if (priorityGroups) priorityGroups.outerHTML = procurementPriorityGroupsPanel();
   }));
+  document.querySelectorAll('[data-real-data-trial-input]').forEach((input) => input.addEventListener('input', () => {
+    realDataTrialInputState[input.name] = input.value;
+    realDataTrialError = '';
+    realDataTrialPreview = null;
+    document.querySelector('[data-real-data-trial-error]')?.remove();
+    document.querySelector('[data-real-data-trial-results]')?.remove();
+  }));
   document.querySelectorAll('[data-order]').forEach((input) => input.addEventListener('input', () => updateOrder(input.dataset.order, input.value)));
   document.querySelectorAll('[data-step]').forEach((btn) => btn.addEventListener('click', () => { const input = document.querySelector(`[data-order="${btn.dataset.id}"]`); input.value = Math.max(0, Number(input.value) + Number(btn.dataset.step)); updateOrder(btn.dataset.id, input.value); }));
   document.querySelectorAll('[data-action]').forEach((el) => el.addEventListener('click', () => handleAction(el.dataset.action, el.dataset)));
@@ -739,45 +801,30 @@ function handleAction(action, dataset) {
     if (!isValidDateInputValue(deliveryRiskInputState.requiredDate)) return toast('请选择有效期望交期');
     if (!isValidDateInputValue(deliveryRiskInputState.asOfDate)) return toast('请选择有效分析日期');
     const plannedQty = Number(deliveryRiskInputState.plannedQty);
-    const materials = materialService.listMaterials();
-    const balances = inventoryService.listBalances();
-    const rows = productService.listBOMItems(product.id).map((item) => {
-      const material = materials.find((candidate) => candidate.id === item.materialId);
-      const inventoryBalance = balances.find((balance) => balance.materialId === item.materialId);
-      return {
-        material,
-        qtyPerProduct: Number(item.qtyPerProduct),
-        requiredQty: Number(item.qtyPerProduct) * plannedQty,
-        stockQty: Number(inventoryBalance?.stockQty ?? 0),
-        safetyStock: Number(inventoryBalance?.safetyStock ?? 0),
-        procurementLeadTimeDays: resolveProcurementLeadTimeDays(material, inventoryBalance),
-      };
-    }).filter((row) => row.material).map((row) => {
-      const risk = calculateProcurementRisk({
-        requiredQty: row.requiredQty,
-        stockQty: row.stockQty,
-        safetyStock: row.safetyStock,
-        procurementLeadTimeDays: row.procurementLeadTimeDays,
-        requiredDate: deliveryRiskInputState.requiredDate,
-        asOfDate: deliveryRiskInputState.asOfDate,
-      });
-      const resultRow = {
-        ...row,
-        shortageQty: risk.shortageQty,
-        remainingQty: risk.remainingQty,
-        riskLevel: risk.riskLevel,
-        quantityRisk: risk.quantityRisk,
-        mustOrderNow: risk.mustOrderNow,
-        latestOrderDate: risk.latestOrderDate,
-        expectedArrivalDate: risk.expectedArrivalDate,
-        deliveryRiskLabel: risk.shortageQty === 0 ? '可满足' : DELIVERY_RISK_LABELS[risk.riskLevel],
-        deliveryRiskReason: risk.shortageQty === 0 ? '库存可覆盖本次需求' : DELIVERY_RISK_REASONS[risk.riskLevel],
-      };
-      return { ...resultRow, recommendation: buildProcurementRecommendation(resultRow) };
-    });
+    const rows = buildTrialRowsFromExistingData({ product, plannedQty, requiredDate: deliveryRiskInputState.requiredDate, asOfDate: deliveryRiskInputState.asOfDate });
     deliveryRiskPreview = { product, plannedQty, requiredDate: deliveryRiskInputState.requiredDate, asOfDate: deliveryRiskInputState.asOfDate, rows };
     render();
     return toast(rows.length ? '交期风险等级预览已生成' : '当前产品尚未维护 BOM，无法生成需求预览');
+  }
+  if (action === 'run-real-data-trial') {
+    document.querySelectorAll('[data-real-data-trial-input]').forEach((input) => {
+      realDataTrialInputState[input.name] = input.value;
+    });
+    const product = productService.listProducts().find((item) => item.id === realDataTrialInputState.selectedProductId);
+    if (!product) realDataTrialError = '请选择产品';
+    else if (!realDataTrialInputState.plannedQty || Number(realDataTrialInputState.plannedQty) <= 0) realDataTrialError = '请输入有效试算数量';
+    else if (!realDataTrialInputState.requiredDate) realDataTrialError = '请选择期望交期';
+    else if (!realDataTrialInputState.asOfDate) realDataTrialError = '请选择试算日期';
+    else if (!isValidDateInputValue(realDataTrialInputState.requiredDate)) realDataTrialError = '请选择有效期望交期';
+    else if (!isValidDateInputValue(realDataTrialInputState.asOfDate)) realDataTrialError = '请选择有效试算日期';
+    else {
+      const plannedQty = Number(realDataTrialInputState.plannedQty);
+      const rows = buildTrialRowsFromExistingData({ product, plannedQty, requiredDate: realDataTrialInputState.requiredDate, asOfDate: realDataTrialInputState.asOfDate });
+      realDataTrialError = '';
+      realDataTrialPreview = { product, plannedQty, requiredDate: realDataTrialInputState.requiredDate, asOfDate: realDataTrialInputState.asOfDate, rows };
+    }
+    render();
+    return;
   }
   if (action === 'analyze') return navigate('analysis');
   if (action === 'reset-data') {
