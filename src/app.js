@@ -98,6 +98,28 @@ function roleDemoGuidePanel() {
   return `<article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">ROLE DEMO GUIDE</span><h3>按角色演示怎么看</h3></div><span class="version">只读演示</span></div><div class="placeholder-copy"><p>演示时可以按角色切换关注点，同一份订单物料风险结果，会被不同角色从不同角度阅读。</p></div><div class="entry-grid">${roleGuideCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>角色演示说明仅用于帮助阅读当前 Lite 演示版，不代表正式权限系统</strong><p>本阶段不会保存操作、修改库存或生成采购单。</p></div></article>`;
 }
 
+function demoOrderStoryPanel() {
+  const orderFacts = [
+    ['客户订单', '某一个型号产品 300 台', 'box'],
+    ['期望交期', '15 天后交付', 'chart'],
+    ['当前判断', '交期紧张', 'grid'],
+    ['下一步', '采购和仓库当天确认', 'warehouse'],
+  ];
+  const systemFindings = [
+    ['缺料风险', '1 个关键物料缺料，需要采购立即确认。', 'cart'],
+    ['库存低风险', '1 个关键物料低于安全库存，会影响排产余量。', 'chart'],
+    ['现场确认', '1 个关键物料需要仓库现场确认，避免账面库存误导判断。', 'warehouse'],
+    ['交付判断', '采购周期会影响 15 天交付是否可承诺。', 'grid'],
+  ];
+  const roleScenarioCards = [
+    ['老板', '看当前订单能否按期交付，以及风险是否需要今天处理。', 'grid'],
+    ['计划', '看交期是否可行，哪些物料会影响排产。', 'chart'],
+    ['采购', '看哪些物料需要立即确认采购或供应周期。', 'cart'],
+    ['仓库', '看哪些库存数据需要现场确认，避免账面库存误导判断。', 'warehouse'],
+  ];
+  return `<article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">CURRENT DEMO ORDER</span><h3>当前演示订单：客户急单，某型号产品 300 台</h3></div><span class="version">Phase 6-Step 1 · 只读故事</span></div><div class="placeholder-copy"><p>这张演示订单指的是某一个型号产品 300 台，不是三个型号合计，也不是每个型号 300 台。客户要求 15 天后交付，系统以该型号 BOM 展开物料需求，并对比库存、安全库存、采购周期与仓库反馈：3 个关键物料需要关注，交期紧张，需要采购和仓库当天确认。</p></div><div class="entry-grid">${orderFacts.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>系统发现的问题</strong><p>本故事只用于现场演示，不保存订单、不生成采购单、不修改库存，也不代表真实订单已创建。</p></div><div class="entry-grid">${systemFindings.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>四角色怎么看这张急单</strong><p>同一张客户急单，老板、计划、采购、仓库分别从交付、排产、供应和现场库存可信度来读。</p></div><div class="entry-grid">${roleScenarioCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>`;
+}
+
 function dashboard() {
   const materials = materialService.listMaterials();
   const products = productService.listProducts();
@@ -111,6 +133,7 @@ function dashboard() {
   ];
   return `<div class="hero"><div><span class="eyebrow">PHASE 4 DEMO WALKTHROUGH</span><h2>Lufuta 物料管理系统 Lite</h2><p>订单驱动的物料风险分析 Demo，用于演示老板、计划、采购、仓库如何阅读缺料、交期与库存反馈；不是完整 ERP、WMS 或财务系统。</p></div><span class="phase-chip">只读演示 · 不执行业务</span></div>
     <div class="stats-grid">${statCard('核心演示', 2, '交期分析 / 仓库反馈', 'blue', 'chart')}${statCard('物料资料', materials.length, '演示主数据', 'violet', 'layers')}${statCard('产品 / BOM', products.length, '演示结构数据', 'blue', 'box')}${statCard('库存风险', lowStockCount, '只读预警参考', 'amber', 'warehouse')}</div>
+    ${demoOrderStoryPanel()}
     <article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">ROLE INFORMATION FLOW</span><h3>四角色信息流</h3></div><span class="version">只读演示</span></div><div class="placeholder-copy"><p>系统围绕同一份订单物料风险结果，让老板、计划、采购、仓库从不同角度协同判断，但本阶段仍保持只读演示边界。</p></div><div class="entry-grid">${roleFlowCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>四角色信息流仅用于演示阅读顺序，不代表权限系统</strong><p>本阶段不会保存操作、修改库存或生成采购单。</p></div></article>
     ${roleDemoGuidePanel()}
     ${demoReadingPathPanel()}
