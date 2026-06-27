@@ -100,15 +100,15 @@ function roleDemoGuidePanel() {
 
 function demoOrderStoryPanel() {
   const orderFacts = [
-    ['客户订单', '某一个型号产品 300 台', 'box'],
+    ['客户订单', 'HE-110S 小型款 300 台', 'box'],
     ['期望交期', '15 天后交付', 'chart'],
     ['当前判断', '交期紧张', 'grid'],
     ['下一步', '采购和仓库当天确认', 'warehouse'],
   ];
   const systemFindings = [
-    ['缺料风险', '1 个关键物料缺料，需要采购立即确认。', 'cart'],
-    ['库存低风险', '1 个关键物料低于安全库存，会影响排产余量。', 'chart'],
-    ['现场确认', '1 个关键物料需要仓库现场确认，避免账面库存误导判断。', 'warehouse'],
+    ['缺料风险', '多项关键物料缺料，需要采购立即确认。', 'cart'],
+    ['库存低风险', '1 个关键物料订单扣减后低于安全库存，会影响排产余量。', 'chart'],
+    ['现场确认', '部分库存需要仓库现场确认，避免账面库存误导交期判断。', 'warehouse'],
     ['交付判断', '采购周期会影响 15 天交付是否可承诺。', 'grid'],
   ];
   const roleScenarioCards = [
@@ -117,7 +117,17 @@ function demoOrderStoryPanel() {
     ['采购', '看哪些物料需要立即确认采购或供应周期。', 'cart'],
     ['仓库', '看哪些库存数据需要现场确认，避免账面库存误导判断。', 'warehouse'],
   ];
-  return `<article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">CURRENT DEMO ORDER</span><h3>当前演示订单：客户急单，某型号产品 300 台</h3></div><span class="version">Phase 6-Step 1 · 只读故事</span></div><div class="placeholder-copy"><p>这张演示订单指的是某一个型号产品 300 台，不是三个型号合计，也不是每个型号 300 台。客户要求 15 天后交付，系统以该型号 BOM 展开物料需求，并对比库存、安全库存、采购周期与仓库反馈：3 个关键物料需要关注，交期紧张，需要采购和仓库当天确认。</p></div><div class="entry-grid">${orderFacts.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>系统发现的问题</strong><p>本故事只用于现场演示，不保存订单、不生成采购单、不修改库存，也不代表真实订单已创建。</p></div><div class="entry-grid">${systemFindings.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>四角色怎么看这张急单</strong><p>同一张客户急单，老板、计划、采购、仓库分别从交付、排产、供应和现场库存可信度来读。</p></div><div class="entry-grid">${roleScenarioCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>`;
+  return `<article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">CURRENT DEMO ORDER</span><h3>当前演示订单：客户急单，HE-110S 小型款 300 台</h3></div><span class="version">Phase 6-Step 2 · 订单决策链路</span></div><div class="placeholder-copy"><p>这张演示订单指的是 HE-110S 小型款 300 台，不是三个型号合计，也不是每个型号 300 台。客户要求 15 天后交付，系统以该型号 BOM 展开物料需求，并对比库存、安全库存、采购周期与仓库反馈：系统发现 3 类关键风险，交期紧张，不能直接乐观承诺，需要采购和仓库当天确认。</p></div><div class="entry-grid">${orderFacts.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>系统发现的问题：3 类关键风险</strong><p>本故事是演示数据下的只读实操场景，不保存订单、不生成采购单、不修改库存，也不代表真实订单已创建。</p></div><div class="entry-grid">${systemFindings.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>四角色怎么看这张急单</strong><p>同一张客户急单，老板、计划、采购、仓库分别从交付、排产、供应和现场库存可信度来读。</p></div><div class="entry-grid">${roleScenarioCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>`;
+}
+
+function demoOrderDecisionPanel() {
+  const decisionCards = [
+    ['当前判断', '交期紧张', '本单关键风险', 'chart'],
+    ['决策建议', '有条件推进', '不建议直接乐观承诺', 'grid'],
+    ['采购动作', '当天确认关键物料到货时间', '建议当天确认', 'cart'],
+    ['仓库动作', '当天确认关键库存真实性', '待仓库确认', 'warehouse'],
+  ];
+  return `<article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">ORDER DECISION</span><h3>本单决策建议</h3></div><span class="version">当前演示数据下</span></div><div class="placeholder-copy"><p>HE-110S 小型款 300 台急单不是直接通过，也不是直接拒绝。当前建议是有条件推进：可以继续推进内部确认，但不建议直接承诺 15 天交付；需要采购确认关键物料到货时间，仓库确认关键库存真实性后，再确认最终交期。</p></div><div class="entry-grid">${decisionCards.map(([title, copy, tag, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small><small>${tag}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>只读边界</strong><p>本单决策建议只用于演示“订单来了 → 识别问题 → 给出建议 → 角色协同”的阅读链路，不保存真实订单、不生成采购单、不修改库存。</p></div></article>`;
 }
 
 function dashboard() {
@@ -134,6 +144,7 @@ function dashboard() {
   return `<div class="hero"><div><span class="eyebrow">PHASE 4 DEMO WALKTHROUGH</span><h2>Lufuta 物料管理系统 Lite</h2><p>订单驱动的物料风险分析 Demo，用于演示老板、计划、采购、仓库如何阅读缺料、交期与库存反馈；不是完整 ERP、WMS 或财务系统。</p></div><span class="phase-chip">只读演示 · 不执行业务</span></div>
     <div class="stats-grid">${statCard('核心演示', 2, '交期分析 / 仓库反馈', 'blue', 'chart')}${statCard('物料资料', materials.length, '演示主数据', 'violet', 'layers')}${statCard('产品 / BOM', products.length, '演示结构数据', 'blue', 'box')}${statCard('库存风险', lowStockCount, '只读预警参考', 'amber', 'warehouse')}</div>
     ${demoOrderStoryPanel()}
+    ${demoOrderDecisionPanel()}
     <article class="panel" style="margin-bottom:20px"><div class="panel-head"><div><span class="kicker">ROLE INFORMATION FLOW</span><h3>四角色信息流</h3></div><span class="version">只读演示</span></div><div class="placeholder-copy"><p>系统围绕同一份订单物料风险结果，让老板、计划、采购、仓库从不同角度协同判断，但本阶段仍保持只读演示边界。</p></div><div class="entry-grid">${roleFlowCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>四角色信息流仅用于演示阅读顺序，不代表权限系统</strong><p>本阶段不会保存操作、修改库存或生成采购单。</p></div></article>
     ${roleDemoGuidePanel()}
     ${demoReadingPathPanel()}
@@ -166,7 +177,7 @@ function bomPage() {
 function inventoryPage() {
   const materials = materialService.listMaterials();
   const balances = inventoryService.listBalances();
-  return `${skeletonNotice('库存台账', '当前只读展示 Lite 阶段的演示库存，用于安全库存与缺料风险判断。采购周期来自物料主数据，旧演示库存字段仅作兼容回退。这里不是真实库存账，本阶段不提供入库、出库、冻结、盘点、过账、批次或库位管理。')}${tablePage({ description: '库存数量来自浏览器中的演示数据，不会生成库存单据。', columns: ['物料', '当前库存', '安全库存', '采购周期', '风险状态', '仓位 / 库位', '最后更新'], rows: materials.map((m) => { const inv = balances.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); const leadTimeDays = resolveProcurementLeadTimeDays(m, inv); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td>${formatProcurementLeadTimeDays(leadTimeDays)}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">未启用</span></td><td><span class="muted">演示数据</span></td></tr>` }) })}`;
+  return `${skeletonNotice('库存台账', '当前只读展示 Lite 阶段的演示库存，是 HE-110S 小型款 300 台急单判断的库存依据页面。这里对比系统库存、安全库存和采购周期，但不是真实库存账，本阶段不提供入库、出库、冻结、盘点、过账、批次或库位管理。')}${tablePage({ description: '库存数量来自浏览器中的演示数据，用于支撑本单缺料、低于安全库存和仓库现场确认判断；不会生成库存单据。', columns: ['物料', '当前库存', '安全库存', '采购周期', '风险状态', '仓位 / 库位', '最后更新'], rows: materials.map((m) => { const inv = balances.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); const leadTimeDays = resolveProcurementLeadTimeDays(m, inv); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td>${formatProcurementLeadTimeDays(leadTimeDays)}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">未启用</span></td><td><span class="muted">演示数据</span></td></tr>` }) })}`;
 }
 
 function warehouseFeedbackForRow(row, index) {
@@ -220,8 +231,8 @@ function warehouseAlertsPage() {
   const feedbackStatusLegend = `<article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">FEEDBACK STATUS GUIDE</span><h3>仓库反馈状态说明</h3></div><span class="version">只读解释层</span></div><div class="placeholder-copy"><p>以下状态只解释仓库现场确认信号，帮助老板、计划、采购、仓库理解库存可信度；状态不保存、不提交、不写入 localStorage、不改变库存、不影响 MRP 核心计算、不生成采购单，也不确认采购建议。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>反馈状态</th><th>仓库侧含义</th><th>对老板 / 计划 / 采购的提醒意义</th><th>人工复核</th></tr></thead><tbody>${feedbackStatusCards.map(([status, warehouseMeaning, audienceMeaning, recheck]) => `<tr><td><span class="soft-tag">${status}</span></td><td>${warehouseMeaning}</td><td>${audienceMeaning}</td><td>${recheck}</td></tr>`).join('')}</tbody></table></div></article>`;
   const roleSignalFlow = `<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ROLE INFORMATION FLOW</span><h3>四角色如何理解仓库反馈</h3></div><span class="version">只读说明层</span></div><div class="placeholder-copy"><p>仓库反馈只是现场可信度信号，用来补充系统库存阅读：不影响 MRP 核心计算结果，不改变交期风险计算，不改变采购建议，不保存、不提交、不写入 localStorage、不改变库存、不生成采购单，也不确认采购建议。</p></div><div class="entry-grid">${roleSignalCards.map(([role, focus, boundary, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${role}</strong><small>${focus}</small><small>${boundary}</small></span></div>`).join('')}</div></article>`;
 
-  return `${skeletonNotice('库存预警与仓库反馈（只读）', '系统库存是分析基础，仓库反馈是现场确认信号：用于提醒老板、计划、采购哪些库存需要人工复核，不直接改变库存、采购或 MRP 结果。')}
-    <div class="page-intro"><div><span class="kicker">WAREHOUSE FEEDBACK BOUNDARY</span><h3 style="margin:4px 0 6px;font-size:16px">仓库库存状态反馈与跨角色预警</h3><p>仓库侧用于反馈现场库存可信度，帮助识别账面库存之外的实物可用性风险；仓库不直接修改系统库存，不生成采购单，不确认采购建议，也不影响 MRP 核心计算结果。当前阶段仍为只读演示，所有反馈状态暂不保存、不提交、不改变库存。</p></div></div>
+  return `${skeletonNotice('库存预警与仓库反馈（只读）', '本页用于判断 HE-110S 小型款 300 台急单中，哪些库存需要仓库现场确认。系统库存是分析基础，仓库反馈是现场可信度信号，不直接改变库存、采购或 MRP 结果。')}
+    <div class="page-intro"><div><span class="kicker">WAREHOUSE FEEDBACK BOUNDARY</span><h3 style="margin:4px 0 6px;font-size:16px">仓库库存状态反馈与跨角色预警</h3><p>仓库侧用于反馈本单关键库存可信度，帮助识别账面库存之外的实物可用性风险；仓库不直接修改系统库存，不生成采购单，不确认采购建议，也不影响 MRP 核心计算结果。当前阶段仍为只读演示，所有反馈状态暂不保存、不提交、不改变库存。</p></div></div>
     <article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ROLE BOUNDARY</span><h3>仓库反馈型角色边界</h3></div><span class="version">Phase 5-Step 1 · 只读</span></div><div class="entry-grid">${boundaryCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>仓库反馈只是一条现场确认信号</strong><p>本阶段不会保存反馈状态、不会提交反馈、不会修改库存、不会生成库存流水、不会生成采购单，也不会改变采购建议或 MRP 核心计算结果。</p></div></article>
     ${feedbackStatusLegend}
     ${roleSignalFlow}
@@ -236,7 +247,7 @@ function warehouseAlertsPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 2C</span><strong>下单前交期与采购分析</strong><p>根据计划数量、BOM、库存和采购周期，提供下单判断、交期说明与采购关注重点。页面仅供分析，不保存订单、不生成采购单、不修改库存。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 100" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${riskSourceSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>分析依据与边界</h3><div class="workflow-steps"><span>计划需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 6 DEMO</span><strong>下单前交期与采购分析</strong><p>本页用于判断 HE-110S 小型款 300 台急单能否按 15 天交付。系统按该型号 BOM 展开需求，结合库存、安全库存、采购周期和仓库反馈，给出只读判断：本单可以有条件推进，但不建议直接乐观承诺。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 300" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${riskSourceSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>本单分析依据与边界</h3><div class="workflow-steps"><span>HE-110S 需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>+</b><span>仓库反馈</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
 }
 
 function orderDecisionSummaryPanel() {
@@ -390,8 +401,8 @@ function procurementPriorityGroup({ key, title, description, emptyText, rows }) 
 
 function procurementPriorityGroupsPanel() {
   const rows = deliveryRiskPreview?.rows;
-  if (!rows) return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">采购视角 · 物料关注顺序</span><h3>采购优先级分组</h3></div><span class="version">只读分组</span></div><div class="empty-table"><strong>等待分析</strong><p>请先完成分析条件并生成结果，再查看采购关注顺序。</p></div></article>`;
-  if (!rows.length) return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">采购视角 · 物料关注顺序</span><h3>采购优先级分组</h3></div><span class="version">只读分组</span></div><div class="empty-table"><strong>暂无法分组</strong><p>当前产品尚未维护 BOM，缺少可用于采购判断的物料需求。</p></div></article>`;
+  if (!rows) return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">采购视角 · 本单物料关注顺序</span><h3>采购优先级分组</h3></div><span class="version">只读分组</span></div><div class="empty-table"><strong>等待分析</strong><p>本区用于判断 HE-110S 小型款 300 台急单中，哪些物料需要采购当天确认采购或供应周期。请先完成分析条件并生成结果。</p></div></article>`;
+  if (!rows.length) return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">采购视角 · 本单物料关注顺序</span><h3>采购优先级分组</h3></div><span class="version">只读分组</span></div><div class="empty-table"><strong>暂无法分组</strong><p>当前产品尚未维护 BOM，缺少可用于采购判断的物料需求。</p></div></article>`;
 
   const immediate = [];
   const attention = [];
@@ -404,12 +415,12 @@ function procurementPriorityGroupsPanel() {
   });
 
   const groups = [
-    { key: 'immediate', title: '立即确认', description: '建议优先确认以下物料的采购安排，降低对当前订单交期的影响。', emptyText: '暂无需要立即确认的物料', rows: immediate },
-    { key: 'attention', title: '建议关注', description: '以下物料当前可能不影响本单，但建议持续关注库存和采购周期。', emptyText: '暂无需要重点关注的物料', rows: attention },
+    { key: 'immediate', title: '立即确认', description: '本单关键风险：建议当天确认以下物料的采购安排和供应周期，降低对 15 天交付的影响。', emptyText: '暂无需要立即确认的物料', rows: immediate },
+    { key: 'attention', title: '建议关注', description: '以下物料当前可能不影响本单直接缺口，但订单扣减后低于安全库存或需要持续关注。', emptyText: '暂无需要重点关注的物料', rows: attention },
     { key: 'no-purchase', title: '暂不采购', description: '以下物料当前库存可覆盖本单，暂不建议立即采购。', emptyText: '暂无可归入暂不采购的物料', rows: noPurchase },
   ];
 
-  return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">采购视角 · 物料关注顺序</span><h3>采购优先级分组</h3></div><span class="version">${rows.length} 项物料</span></div><div class="entry-grid">${groups.map(procurementPriorityGroup).join('')}</div><div class="placeholder-copy"><p>本分组仅供采购判断，不会创建采购任务或采购单；实际采购仍需人工确认。</p></div></article>`;
+  return `<article class="panel" data-procurement-priority-groups style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">采购视角 · 本单物料关注顺序</span><h3>采购优先级分组</h3></div><span class="version">${rows.length} 项物料</span></div><div class="placeholder-copy"><p>本区用于判断 HE-110S 小型款 300 台急单中，哪些物料需要采购优先确认；不会创建采购任务或采购单。</p></div><div class="entry-grid">${groups.map(procurementPriorityGroup).join('')}</div><div class="placeholder-copy"><p>本分组仅供采购判断，实际采购仍需人工确认。</p></div></article>`;
 }
 
 function warehouseFeedbackPlanHint(feedback) {
@@ -433,7 +444,7 @@ function warehouseFeedbackReferencePanel() {
   if (!rows) return '';
   if (!rows.length) return `<article class="panel" data-warehouse-feedback-reference style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">仓库反馈 · 计划 / 采购参考</span><h3>仓库反馈提示</h3></div><span class="version">只读参考</span></div><div class="empty-table"><strong>暂无物料反馈</strong><p>当前产品尚未维护 BOM，无法同步仓库反馈提示。</p></div></article>`;
   const feedbackRows = rows.map((row, index) => ({ row, feedback: warehouseFeedbackForRow(row, index) }));
-  return `<article class="panel table-panel" data-warehouse-feedback-reference style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">仓库反馈 · 计划 / 采购参考</span><h3>仓库反馈提示</h3></div><span class="version">${feedbackRows.length} 项 · 只读参考</span></div><div class="placeholder-copy"><p>仓库反馈仅作为计划和采购的只读参考，不会修改库存，不会改变采购建议，不会生成采购单。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料</th><th>仓库反馈</th><th>计划参考</th><th>采购参考</th><th>说明</th></tr></thead><tbody>${feedbackRows.map(({ row, feedback }) => `<tr><td><div class="cell-main"><div class="material-avatar small">${row.material.name[0]}</div><div><strong>${row.material.name}</strong><small>${row.material.code} · 库存 ${format(row.stockQty)} ${row.material.unit}</small></div></div></td><td><span class="soft-tag">${feedback.feedback}</span></td><td>${warehouseFeedbackPlanHint(feedback)}</td><td>${warehouseFeedbackPurchaseHint(row, feedback)}</td><td>${feedback.note}</td></tr>`).join('')}</tbody></table></div></article>`;
+  return `<article class="panel table-panel" data-warehouse-feedback-reference style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">仓库反馈 · 本单库存可信度参考</span><h3>仓库反馈提示</h3></div><span class="version">${feedbackRows.length} 项 · 只读参考</span></div><div class="placeholder-copy"><p>本区用于判断 HE-110S 小型款 300 台急单中，哪些库存数据需要仓库现场确认。仓库反馈仅作为计划和采购的只读参考，不会修改库存，不会改变采购建议，不会生成采购单。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料</th><th>仓库反馈</th><th>计划参考</th><th>采购参考</th><th>说明</th></tr></thead><tbody>${feedbackRows.map(({ row, feedback }) => `<tr><td><div class="cell-main"><div class="material-avatar small">${row.material.name[0]}</div><div><strong>${row.material.name}</strong><small>${row.material.code} · 库存 ${format(row.stockQty)} ${row.material.unit}</small></div></div></td><td><span class="soft-tag">${feedback.feedback}</span></td><td>${warehouseFeedbackPlanHint(feedback)}</td><td>${warehouseFeedbackPurchaseHint(row, feedback)}</td><td>${feedback.note}</td></tr>`).join('')}</tbody></table></div></article>`;
 }
 
 function deliveryRiskPreviewPanel() {
@@ -452,7 +463,7 @@ function productBomPage() {
   const selected = sessionStorage.getItem('selectedProduct') || products[0]?.id;
   const items = productService.listBOMItems(selected);
   const selectedProduct = products.find((product) => product.id === selected);
-  return `${skeletonNotice('产品 / BOM', '当前只读展示 Lite 产品基础资料及其物料用量关系，供结构验证和后续缺料计算使用。产品侧不含审批、版本冻结、生命周期或客户订单绑定；BOM 侧不含审核、工程变更、版本发布或历史追踪。')}<div class="product-tabs">${products.map((p) => `<button class="product-tab ${p.id === selected ? 'active' : ''}" data-product-tab="${p.id}"><small>${p.model}</small><strong>${p.code}</strong><span>${productService.listBOMItems(p.id).length} 项物料</span></button>`).join('')}</div><article class="panel table-panel"><div class="panel-head bom-title"><div><span class="kicker">PRODUCT / BOM SKELETON</span><h3>${selectedProduct?.code || '未知产品'} 物料组成</h3></div><span class="version">只读演示</span></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>序号</th><th>物料编码</th><th>物料名称</th><th>分类</th><th>单台用量</th><th>单位</th><th>BOM 版本</th></tr></thead><tbody>${items.map((row, index) => { const material = materials.find((m) => m.id === row.materialId); if (!material) return ''; return `<tr><td class="muted">${String(index + 1).padStart(2, '0')}</td><td><strong class="code">${material.code}</strong></td><td>${material.name}</td><td><span class="soft-tag">${material.category}</span></td><td><strong>${row.qtyPerProduct}</strong></td><td>${material.unit}</td><td><span class="muted">未启用</span></td></tr>`; }).join('')}</tbody></table></div></article>`;
+  return `${skeletonNotice('产品 / BOM', '当前只读展示 Lite 产品基础资料及其物料用量关系，是 HE-110S 小型款 300 台急单展开物料需求的依据页面。产品侧不含审批、版本冻结、生命周期或客户订单绑定；BOM 侧不含审核、工程变更、版本发布或历史追踪。')}<div class="product-tabs">${products.map((p) => `<button class="product-tab ${p.id === selected ? 'active' : ''}" data-product-tab="${p.id}"><small>${p.model}</small><strong>${p.code}</strong><span>${productService.listBOMItems(p.id).length} 项物料</span></button>`).join('')}</div><article class="panel table-panel"><div class="panel-head bom-title"><div><span class="kicker">PRODUCT / BOM SKELETON</span><h3>${selectedProduct?.code || '未知产品'} 物料组成</h3></div><span class="version">${selectedProduct?.code === 'HE-110S' ? '本单判断依据' : '只读演示'}</span></div><div class="placeholder-copy"><p>当前演示急单使用 HE-110S 小型款 BOM 展开 300 台物料需求；本表仅展示结构依据，不保存订单或修改 BOM。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>序号</th><th>物料编码</th><th>物料名称</th><th>分类</th><th>单台用量</th><th>单位</th><th>BOM 版本</th></tr></thead><tbody>${items.map((row, index) => { const material = materials.find((m) => m.id === row.materialId); if (!material) return ''; return `<tr><td class="muted">${String(index + 1).padStart(2, '0')}</td><td><strong class="code">${material.code}</strong></td><td>${material.name}</td><td><span class="soft-tag">${material.category}</span></td><td><strong>${row.qtyPerProduct}</strong></td><td>${material.unit}</td><td><span class="muted">${selectedProduct?.code === 'HE-110S' ? '本单依据' : '未启用'}</span></td></tr>`; }).join('')}</tbody></table></div></article>`;
 }
 
 
