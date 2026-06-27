@@ -19,12 +19,12 @@ const auditService = createAuditService({ repository });
 let data = repository.getSnapshot();
 let currentPage = 'dashboard';
 let toastTimer;
-const deliveryRiskInputState = {
-  selectedProductId: '',
-  plannedQty: '',
-  requiredDate: '',
-  asOfDate: '',
+const DEMO_DELIVERY_RISK_ORDER = {
+  productId: 'p1',
+  plannedQty: '300',
+  deliveryDaysFromToday: 15,
 };
+const deliveryRiskInputState = getDemoDeliveryRiskDefaults();
 let deliveryRiskPreview = null;
 const DELIVERY_RISK_LABELS = { ok: '可满足', warning: '交期紧张', critical: '交期高风险', unknown: '无法判断' };
 const DELIVERY_RISK_REASONS = {
@@ -33,6 +33,32 @@ const DELIVERY_RISK_REASONS = {
   critical: '采购周期预计无法满足期望交期',
   unknown: '采购周期未维护，无法判断交期风险',
 };
+
+function formatDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date, days) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function getDemoDeliveryRiskDefaults(baseDate = new Date()) {
+  return {
+    selectedProductId: DEMO_DELIVERY_RISK_ORDER.productId,
+    plannedQty: DEMO_DELIVERY_RISK_ORDER.plannedQty,
+    requiredDate: formatDateInputValue(addDays(baseDate, DEMO_DELIVERY_RISK_ORDER.deliveryDaysFromToday)),
+    asOfDate: formatDateInputValue(baseDate),
+  };
+}
+
+function isValidDateInputValue(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
 
 const pages = [
   ['dashboard', '首页', 'grid'], ['delivery-risk', '交期风险分析', 'chart'], ['warehouse-alerts', '库存预警反馈', 'warehouse'],
@@ -247,7 +273,7 @@ function warehouseAlertsPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 6 DEMO</span><strong>下单前交期与采购分析</strong><p>本页用于判断 HE-110S 小型款 300 台急单能否按 15 天交付。系统按该型号 BOM 展开需求，结合库存、安全库存、采购周期和仓库反馈，给出只读判断：本单可以有条件推进，但不建议直接乐观承诺。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 300" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${riskSourceSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>本单分析依据与边界</h3><div class="workflow-steps"><span>HE-110S 需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>+</b><span>仓库反馈</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 6 DEMO</span><strong>下单前交期与采购分析</strong><p>本页用于判断 HE-110S 小型款 300 台急单能否按 15 天交付。系统按该型号 BOM 展开需求，结合库存、安全库存、采购周期和仓库反馈，给出只读判断：本单可以有条件推进，但不建议直接乐观承诺。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 300" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="placeholder-copy"><p>当前已默认带入演示订单，可手动修改条件重新分析；默认值不代表真实订单已保存。</p></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${riskSourceSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>本单分析依据与边界</h3><div class="workflow-steps"><span>HE-110S 需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>+</b><span>仓库反馈</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
 }
 
 function orderDecisionSummaryPanel() {
@@ -436,7 +462,8 @@ function warehouseFeedbackPurchaseHint(row, feedback) {
   if (feedback.feedback === '账面库存可能不可靠') return '建议采购关注，但不是采购申请';
   if (feedback.feedback === '生产前需确认可用数量') return '安全库存偏低，建议提前关注供应风险';
   if (Number(row.procurementLeadTimeDays) >= 14) return '采购周期较长，建议提前确认供应可能性';
-  return feedback.target.includes('采购') ? '建议采购关注供应风险，但不是采购申请' : '暂无采购关注提示';
+  const target = typeof feedback.target === 'string' ? feedback.target : '';
+  return target.includes('采购') ? '建议采购关注供应风险，但不是采购申请' : '暂无采购关注提示';
 }
 
 function warehouseFeedbackReferencePanel() {
@@ -566,6 +593,8 @@ function handleAction(action, dataset) {
     if (!deliveryRiskInputState.plannedQty || Number(deliveryRiskInputState.plannedQty) <= 0) return toast('请输入有效计划数量');
     if (!deliveryRiskInputState.requiredDate) return toast('请选择期望交期');
     if (!deliveryRiskInputState.asOfDate) return toast('请选择分析日期');
+    if (!isValidDateInputValue(deliveryRiskInputState.requiredDate)) return toast('请选择有效期望交期');
+    if (!isValidDateInputValue(deliveryRiskInputState.asOfDate)) return toast('请选择有效分析日期');
     const plannedQty = Number(deliveryRiskInputState.plannedQty);
     const materials = materialService.listMaterials();
     const balances = inventoryService.listBalances();
