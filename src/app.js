@@ -62,6 +62,7 @@ function isValidDateInputValue(value) {
 
 const pages = [
   ['dashboard', '首页', 'grid'], ['delivery-risk', '交期风险分析', 'chart'], ['warehouse-alerts', '库存预警反馈', 'warehouse'],
+  ['order-evaluations', '订单评估记录', 'chart'],
   ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'], ['inventory', '库存台账', 'warehouse'],
   ['audit', '待审核流水', 'chart'], ['inbound', '入库占位', 'box'], ['outbound', '领料占位', 'cart'], ['supplier-return', '退货占位', 'warehouse'],
 ];
@@ -210,6 +211,27 @@ function inventoryPage() {
   const materials = materialService.listMaterials();
   const balances = inventoryService.listBalances();
   return `${skeletonNotice('库存台账', '当前只读展示 Lite 阶段的演示库存，是 HE-110S 小型款 300 台急单判断的库存依据页面。这里对比系统库存、安全库存和采购周期，但不是真实库存账，本阶段不提供入库、出库、冻结、盘点、过账、批次或库位管理。')}${tablePage({ description: '库存数量来自浏览器中的演示数据，用于支撑本单缺料、低于安全库存和仓库现场确认判断；不会生成库存单据。', columns: ['物料', '当前库存', '安全库存', '采购周期', '风险状态', '仓位 / 库位', '最后更新'], rows: materials.map((m) => { const inv = balances.find((i) => i.materialId === m.id) || { stockQty: 0, safetyStock: 0 }; const low = Number(inv.stockQty) < Number(inv.safetyStock); const leadTimeDays = resolveProcurementLeadTimeDays(m, inv); return `<tr><td><div class="cell-main"><div class="material-avatar small">${m.name[0]}</div><div><strong>${m.name}</strong><small>${m.code}</small></div></div></td><td><strong>${format(inv.stockQty)}</strong> ${m.unit}</td><td>${format(inv.safetyStock)} ${m.unit}</td><td>${formatProcurementLeadTimeDays(leadTimeDays)}</td><td><span class="stock-level ${low ? 'bad' : ''}"><i></i>${low ? '低于安全线' : '正常'}</span></td><td><span class="muted">未启用</span></td><td><span class="muted">演示数据</span></td></tr>` }) })}`;
+}
+
+function orderEvaluationProductLabel(productId) {
+  const product = data.products.find((item) => item.id === productId);
+  return product ? `${product.code} · ${product.model}` : '未知产品';
+}
+
+function orderEvaluationRiskLabel(riskLevel) {
+  return DELIVERY_RISK_LABELS[riskLevel] || '待确认';
+}
+
+function orderEvaluationStatusLabel(status) {
+  if (status === 'analyzed') return '已分析';
+  return '待确认';
+}
+
+function orderEvaluationsPage() {
+  const records = data.orderEvaluationRecords || [];
+  const rows = records.map((record) => `<tr><td><strong class="code">${record.id || '待编号'}</strong></td><td>${orderEvaluationProductLabel(record.input?.productId)}</td><td><strong>${format(record.input?.plannedQty || 0)}</strong> 台</td><td>${record.input?.requiredDate || '待确认'}</td><td>${record.input?.asOfDate || '待确认'}</td><td><span class="soft-tag">${orderEvaluationRiskLabel(record.summary?.riskLevel)}</span></td><td>${format(record.summary?.keyRiskMaterialCount || 0)}</td><td>${format(record.summary?.procurementConfirmCount || 0)}</td><td>${format(record.summary?.warehouseConfirmCount || 0)}</td><td><span class="soft-tag">${orderEvaluationStatusLabel(record.status)}</span></td></tr>`);
+  const body = rows.length ? rows.join('') : '<tr><td colspan="10"><div class="empty-table"><strong>暂无评估记录</strong><p>当前没有静态订单评估记录；本页仍然只读，不提供新增、编辑或删除。</p></div></td></tr>';
+  return `${skeletonNotice('订单评估记录', '当前页面展示的是订单评估记录原型数据，用于回看一次交期风险分析。它不是正式销售订单，不占用库存，不生成采购单，也不进入财务。')}<article class="panel table-panel" data-order-evaluations-page><div class="panel-head"><div><span class="kicker">ORDER EVALUATION RECORDS</span><h3>订单评估记录</h3></div><span class="version">${records.length} 条 · 只读演示</span></div><div class="placeholder-copy"><p>这些记录来自静态演示数据，只用于说明“订单场景评估”如何被回看；页面不提供新增、编辑、删除、重新分析或详情操作，也不会改变库存、采购、财务或审批状态。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>评估编号</th><th>产品</th><th>数量</th><th>期望交期</th><th>分析日期</th><th>风险等级</th><th>关键风险物料</th><th>需采购确认</th><th>需仓库确认</th><th>状态</th></tr></thead><tbody>${body}</tbody></table></div></article>`;
 }
 
 function warehouseFeedbackForRow(row, index) {
@@ -580,6 +602,7 @@ function render() {
     inventory: inventoryPage,
     'warehouse-alerts': warehouseAlertsPage,
     'delivery-risk': deliveryRiskPage,
+    'order-evaluations': orderEvaluationsPage,
     audit: auditPage,
     inbound: () => documentPlaceholder('入库占位', '后续可记录到货入库方向', '当前不提供入库单填写、保存、审核或库存增加。'),
     outbound: () => documentPlaceholder('领料占位', '后续可记录领料出库方向', '当前不提供领料单填写、保存、审核或库存扣减。'),
