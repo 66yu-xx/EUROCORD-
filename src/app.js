@@ -180,12 +180,20 @@ function warehouseAlertsPage() {
     ['不影响 MRP 结果', '反馈状态只作为提醒信号，不影响缺料、安全库存、交期风险等 MRP 核心计算结果。', 'grid'],
     ['提醒人工复核', '反馈用于提醒老板、计划、采购哪些库存需要结合现场情况人工复核。', 'warehouse'],
   ];
+  const feedbackStatusCards = [
+    ['未确认', '仓库尚未对现场库存进行确认。', '老板、计划、采购不能把该库存视为完全可靠；如涉及交期或缺料风险，需要人工复核。', '需要人工复核'],
+    ['已确认', '仓库已确认现场库存与系统库存基本一致。', '老板、计划、采购可以把该库存作为当前分析依据；但仍不代表系统执行了任何库存变更。', '通常无需额外复核'],
+    ['现场异常', '仓库发现实物、库位、包装、待检状态或可用性存在异常。', '老板、计划、采购需要谨慎使用当前库存判断；系统不会自动改变库存，只提示需要人工确认。', '需要人工复核'],
+    ['待盘点', '当前库存状态需要进一步盘点确认。', '计划和采购不能完全依赖当前库存数量；系统不自动调账，不改变系统库存。', '需要人工复核'],
+  ];
   const warehouseFeedbackRows = inventoryRows.map(warehouseFeedbackForRow);
   const warehouseFeedbackTable = `${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料编码</th><th>物料名称</th><th>单位</th><th>系统库存</th><th>安全库存</th><th>库存状态</th><th>仓库反馈状态</th><th>给老板 / 计划 / 采购的提示说明</th></tr></thead><tbody>${warehouseFeedbackRows.map((row) => `<tr><td><strong class="code">${row.material.code}</strong></td><td>${row.material.name}</td><td>${row.material.unit}</td><td><strong>${format(row.stockQty)}</strong></td><td>${format(row.safetyStock)}</td><td><span class="soft-tag">${row.inventoryStatus}</span></td><td><span class="soft-tag">${row.feedbackStatus}</span></td><td>${row.audienceHint}</td></tr>`).join('')}</tbody></table></div>`;
+  const feedbackStatusLegend = `<article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">FEEDBACK STATUS GUIDE</span><h3>仓库反馈状态说明</h3></div><span class="version">只读解释层</span></div><div class="placeholder-copy"><p>以下状态只解释仓库现场确认信号，帮助老板、计划、采购、仓库理解库存可信度；状态不保存、不提交、不写入 localStorage、不改变库存、不影响 MRP 核心计算、不生成采购单，也不确认采购建议。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>反馈状态</th><th>仓库侧含义</th><th>对老板 / 计划 / 采购的提醒意义</th><th>人工复核</th></tr></thead><tbody>${feedbackStatusCards.map(([status, warehouseMeaning, audienceMeaning, recheck]) => `<tr><td><span class="soft-tag">${status}</span></td><td>${warehouseMeaning}</td><td>${audienceMeaning}</td><td>${recheck}</td></tr>`).join('')}</tbody></table></div></article>`;
 
   return `${skeletonNotice('库存预警与仓库反馈（只读）', '系统库存是分析基础，仓库反馈是现场确认信号：用于提醒老板、计划、采购哪些库存需要人工复核，不直接改变库存、采购或 MRP 结果。')}
     <div class="page-intro"><div><span class="kicker">WAREHOUSE FEEDBACK BOUNDARY</span><h3 style="margin:4px 0 6px;font-size:16px">仓库库存状态反馈与跨角色预警</h3><p>仓库侧用于反馈现场库存可信度，帮助识别账面库存之外的实物可用性风险；仓库不直接修改系统库存，不生成采购单，不确认采购建议，也不影响 MRP 核心计算结果。当前阶段仍为只读演示，所有反馈状态暂不保存、不提交、不改变库存。</p></div></div>
     <article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ROLE BOUNDARY</span><h3>仓库反馈型角色边界</h3></div><span class="version">Phase 5-Step 1 · 只读</span></div><div class="entry-grid">${boundaryCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>仓库反馈只是一条现场确认信号</strong><p>本阶段不会保存反馈状态、不会提交反馈、不会修改库存、不会生成库存流水、不会生成采购单，也不会改变采购建议或 MRP 核心计算结果。</p></div></article>
+    ${feedbackStatusLegend}
     <article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE STATUS FEEDBACK</span><h3>仓库关注物料与库存可信度反馈</h3></div><span class="version">${warehouseFeedbackRows.length} 项 · 只读演示</span></div><div class="placeholder-copy"><p>以下表格按物料展示仓库需要关注的系统库存、安全库存、库存状态和演示反馈状态。反馈状态仅用于说明现场可信度：默认可视为未确认，也可按现有库存状态演示为待盘点、现场异常或已确认；这些状态暂不保存、不提交、不写入 localStorage、不修改库存、不确认采购建议、不生成采购单，也不影响 MRP 核心计算。</p></div>${warehouseFeedbackTable}</article>
     <div class="page-intro"><div><span class="kicker">WAREHOUSE OVERVIEW</span><h3 style="margin:4px 0 6px;font-size:16px">仓库库存概览</h3><p>以下数字基于当前演示库存只读汇总，仅用于仓库预警参考；安全库存缺失或为 0 时不纳入低库存判断，也不会自动触发任何业务单据。</p></div></div>
     <div class="stats-grid">${statCard('物料总数', materials.length, '来自现有物料资料', 'violet', 'layers')}${statCard('库存为 0', zeroStockCount, '当前库存小于等于 0', 'red', 'warehouse')}${statCard('低于安全库存', lowStockCount, '库存大于 0 且低于安全库存', 'amber', 'chart')}${statCard('库存正常', normalStockCount, '当前库存大于等于安全库存', 'blue', 'box')}</div>
