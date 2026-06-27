@@ -149,12 +149,12 @@ function inventoryPage() {
 function warehouseFeedbackForRow(row, index) {
   const stockQty = Number(row.stockQty ?? 0);
   const safetyStock = Number(row.safetyStock ?? 0);
-  if (stockQty <= 0) return { ...row, systemStatus: '库存为 0', feedback: '账面库存可能不可靠', target: '计划 / 采购', note: '计划排产前需确认可用数量，采购可提前关注供应风险；这不是采购申请。' };
-  if (stockQty < safetyStock) return { ...row, systemStatus: '低于安全库存', feedback: '生产前需确认可用数量', target: '计划 / 采购', note: '库存低于安全库存，提醒计划复核排产风险，并同步采购关注供应准备。' };
-  if (safetyStock <= 0) return { ...row, systemStatus: '安全库存未维护', feedback: '实物数量需复查', target: '计划', note: '安全库存基准缺失，提醒计划在订单判断前确认库存可用性。' };
-  if (index % 5 === 0) return { ...row, systemStatus: '库存正常', feedback: '物料位置需确认', target: '计划', note: '库存数量未触发预警，仅演示仓库可提示排产前确认物料位置。' };
-  if (index % 5 === 1) return { ...row, systemStatus: '库存正常', feedback: '包装 / 状态待确认', target: '计划', note: '库存数量未触发预警，仅演示仓库可提示实物包装或状态待确认。' };
-  return { ...row, systemStatus: '库存正常', feedback: '暂无异常', target: '无', note: '当前库存状态未触发仓库风险反馈。' };
+  if (stockQty <= 0) return { ...row, inventoryStatus: '缺料', feedbackStatus: '现场异常', audienceHint: '提醒老板当前物料存在交付风险，计划排产前需复核现场可用数量，采购可提前关注供应准备。' };
+  if (stockQty < safetyStock) return { ...row, inventoryStatus: '库存低', feedbackStatus: '待盘点', audienceHint: '提醒计划排产前复核安全库存缺口，采购关注后续补充节奏，老板看到的是需要人工复核的库存风险。' };
+  if (safetyStock <= 0) return { ...row, inventoryStatus: '待确认', feedbackStatus: '未确认', audienceHint: '提醒计划和老板当前缺少安全库存基准，仓库反馈仅提示需要人工确认现场可信度。' };
+  if (index % 5 === 0) return { ...row, inventoryStatus: '正常', feedbackStatus: '待盘点', audienceHint: '系统库存正常，但演示提示仓库可在排产前复核物料位置，供计划参考。' };
+  if (index % 5 === 1) return { ...row, inventoryStatus: '正常', feedbackStatus: '未确认', audienceHint: '系统库存正常，但实物包装或状态尚未确认，提醒计划按需复核。' };
+  return { ...row, inventoryStatus: '正常', feedbackStatus: '已确认', audienceHint: '当前未提示额外库存可信度风险，老板、计划、采购仅作为只读参考。' };
 }
 
 function warehouseAlertsPage() {
@@ -181,12 +181,12 @@ function warehouseAlertsPage() {
     ['提醒人工复核', '反馈用于提醒老板、计划、采购哪些库存需要结合现场情况人工复核。', 'warehouse'],
   ];
   const warehouseFeedbackRows = inventoryRows.map(warehouseFeedbackForRow);
-  const warehouseFeedbackTable = `${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料</th><th>系统库存状态</th><th>仓库状态反馈</th><th>影响对象</th><th>说明</th></tr></thead><tbody>${warehouseFeedbackRows.map((row) => `<tr><td><div class="cell-main"><div class="material-avatar small">${row.material.name[0]}</div><div><strong>${row.material.name}</strong><small>${row.material.code} · ${format(row.stockQty)} ${row.material.unit}</small></div></div></td><td><span class="soft-tag">${row.systemStatus}</span></td><td>${row.feedback}</td><td>${row.target}</td><td>${row.note}</td></tr>`).join('')}</tbody></table></div>`;
+  const warehouseFeedbackTable = `${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>物料编码</th><th>物料名称</th><th>单位</th><th>系统库存</th><th>安全库存</th><th>库存状态</th><th>仓库反馈状态</th><th>给老板 / 计划 / 采购的提示说明</th></tr></thead><tbody>${warehouseFeedbackRows.map((row) => `<tr><td><strong class="code">${row.material.code}</strong></td><td>${row.material.name}</td><td>${row.material.unit}</td><td><strong>${format(row.stockQty)}</strong></td><td>${format(row.safetyStock)}</td><td><span class="soft-tag">${row.inventoryStatus}</span></td><td><span class="soft-tag">${row.feedbackStatus}</span></td><td>${row.audienceHint}</td></tr>`).join('')}</tbody></table></div>`;
 
   return `${skeletonNotice('库存预警与仓库反馈（只读）', '系统库存是分析基础，仓库反馈是现场确认信号：用于提醒老板、计划、采购哪些库存需要人工复核，不直接改变库存、采购或 MRP 结果。')}
     <div class="page-intro"><div><span class="kicker">WAREHOUSE FEEDBACK BOUNDARY</span><h3 style="margin:4px 0 6px;font-size:16px">仓库库存状态反馈与跨角色预警</h3><p>仓库侧用于反馈现场库存可信度，帮助识别账面库存之外的实物可用性风险；仓库不直接修改系统库存，不生成采购单，不确认采购建议，也不影响 MRP 核心计算结果。当前阶段仍为只读演示，所有反馈状态暂不保存、不提交、不改变库存。</p></div></div>
     <article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ROLE BOUNDARY</span><h3>仓库反馈型角色边界</h3></div><span class="version">Phase 5-Step 1 · 只读</span></div><div class="entry-grid">${boundaryCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>仓库反馈只是一条现场确认信号</strong><p>本阶段不会保存反馈状态、不会提交反馈、不会修改库存、不会生成库存流水、不会生成采购单，也不会改变采购建议或 MRP 核心计算结果。</p></div></article>
-    <article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE STATUS FEEDBACK</span><h3>仓库库存状态反馈列表</h3></div><span class="version">${warehouseFeedbackRows.length} 项 · 只读演示</span></div><div class="placeholder-copy"><p>以下内容为只读演示反馈：系统库存仍是分析基础，仓库反馈仅提示现场可信度；状态不保存、不提交、不修改库存、不确认采购建议、不生成采购单。</p></div>${warehouseFeedbackTable}</article>
+    <article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE STATUS FEEDBACK</span><h3>仓库关注物料与库存可信度反馈</h3></div><span class="version">${warehouseFeedbackRows.length} 项 · 只读演示</span></div><div class="placeholder-copy"><p>以下表格按物料展示仓库需要关注的系统库存、安全库存、库存状态和演示反馈状态。反馈状态仅用于说明现场可信度：默认可视为未确认，也可按现有库存状态演示为待盘点、现场异常或已确认；这些状态暂不保存、不提交、不写入 localStorage、不修改库存、不确认采购建议、不生成采购单，也不影响 MRP 核心计算。</p></div>${warehouseFeedbackTable}</article>
     <div class="page-intro"><div><span class="kicker">WAREHOUSE OVERVIEW</span><h3 style="margin:4px 0 6px;font-size:16px">仓库库存概览</h3><p>以下数字基于当前演示库存只读汇总，仅用于仓库预警参考；安全库存缺失或为 0 时不纳入低库存判断，也不会自动触发任何业务单据。</p></div></div>
     <div class="stats-grid">${statCard('物料总数', materials.length, '来自现有物料资料', 'violet', 'layers')}${statCard('库存为 0', zeroStockCount, '当前库存小于等于 0', 'red', 'warehouse')}${statCard('低于安全库存', lowStockCount, '库存大于 0 且低于安全库存', 'amber', 'chart')}${statCard('库存正常', normalStockCount, '当前库存大于等于安全库存', 'blue', 'box')}</div>
     <article class="panel table-panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE ALERTS</span><h3>库存预警列表</h3></div><span class="version">${alertRows.length} 项 · 只读</span></div><div class="placeholder-copy"><p>未维护安全库存或安全库存为 0 的物料暂不纳入低库存预警；本列表只显示库存为 0 和低于安全库存的只读提示。</p></div>${alertTable}</article>
