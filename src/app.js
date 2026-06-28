@@ -37,6 +37,8 @@ const DELIVERY_RISK_REASONS = {
   critical: '采购周期预计无法满足期望交期',
   unknown: '采购周期未维护，无法判断交期风险',
 };
+const TRIAL_DATE_MIN = '2000-01-01';
+const TRIAL_DATE_MAX = '2100-12-31';
 
 function formatDateInputValue(date) {
   const year = date.getFullYear();
@@ -61,7 +63,17 @@ function getDemoDeliveryRiskDefaults(baseDate = new Date()) {
 }
 
 function isValidDateInputValue(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  if (year < 2000 || year > 2100) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+function validateTrialDateInputs({ requiredDate, asOfDate, asOfLabel = '分析日期' }) {
+  if (!isValidDateInputValue(requiredDate) || !isValidDateInputValue(asOfDate)) return '请检查日期，当前试算日期年份需要在 2000 到 2100 之间。';
+  if (requiredDate < asOfDate) return `期望交期不能早于${asOfLabel}，请检查日期。`;
+  return '';
 }
 
 function buildTrialRowsFromExistingData({ product, plannedQty, requiredDate, asOfDate }) {
@@ -466,7 +478,7 @@ function realDataTrialPage() {
     ['不导入新数据', '当前只读取系统现有产品、BOM、库存和采购周期，不导入 BOM、库存或价格。', 'layers'],
   ];
   const amountCostPlaceholder = `<article class="panel" data-real-data-trial-amount-cost style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">AMOUNT / COST</span><h3>金额与成本参考</h3></div><span class="version">占位状态 · 不进财务</span></div><div class="placeholder-form"><div><span>参考单价</span><strong>待维护</strong></div><div><span>建议采购数量</span><strong>待试算 / 由后续阶段接入</strong></div><div><span>采购金额参考</span><strong>待试算</strong></div><div><span>成本影响参考</span><strong>待确认</strong></div><div><span>价格状态</span><strong>未维护 / 待确认</strong></div></div><div class="placeholder-copy"><p>当前没有接入价格数据，不计算采购金额，不形成正式成本，不进入财务。</p></div></article>`;
-  const trialForm = `<article class="panel" data-real-data-trial-form style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">REAL DATA TRIAL</span><h3>一次性试算条件</h3></div><span class="version">使用系统现有资料</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-real-data-trial-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>试算数量</span><input name="plannedQty" type="number" min="1" step="1" placeholder="请输入数量" value="${realDataTrialInputState.plannedQty}" data-real-data-trial-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${realDataTrialInputState.requiredDate}" data-real-data-trial-input /></label><label class="field"><span>试算日期</span><input name="asOfDate" type="date" value="${realDataTrialInputState.asOfDate}" data-real-data-trial-input /></label></div>${realDataTrialError ? `<div class="placeholder-copy" data-real-data-trial-error><p class="danger-text">${realDataTrialError}</p></div>` : ''}<div class="placeholder-copy"><p>本区只使用系统现有产品、BOM、库存和采购周期做当前页面一次性试算；不支持手动新增产品，不导入 BOM、库存或价格。</p></div><div class="modal-actions"><button class="primary" type="button" data-action="run-real-data-trial">${icon('chart', 17)} 开始试算</button></div></article>`;
+  const trialForm = `<article class="panel" data-real-data-trial-form style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">REAL DATA TRIAL</span><h3>一次性试算条件</h3></div><span class="version">使用系统现有资料</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-real-data-trial-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>试算数量</span><input name="plannedQty" type="number" min="1" step="1" placeholder="请输入数量" value="${realDataTrialInputState.plannedQty}" data-real-data-trial-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${realDataTrialInputState.requiredDate}" data-real-data-trial-input /></label><label class="field"><span>试算日期</span><input name="asOfDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${realDataTrialInputState.asOfDate}" data-real-data-trial-input /></label></div>${realDataTrialError ? `<div class="placeholder-copy" data-real-data-trial-error><p class="danger-text">${realDataTrialError}</p></div>` : ''}<div class="placeholder-copy"><p>本区只使用系统现有产品、BOM、库存和采购周期做当前页面一次性试算；不支持手动新增产品，不导入 BOM、库存或价格。</p></div><div class="modal-actions"><button class="primary" type="button" data-action="run-real-data-trial">${icon('chart', 17)} 开始试算</button></div></article>`;
 
   return `${skeletonNotice('真实数据试算', '这里用于基于系统现有产品、BOM、库存和采购周期做一次性试算，帮助判断缺料、交期、采购建议和仓库确认点。当前不导入新数据，不保存订单，不修改库存，不生成采购单，不进入财务。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 6</span><h3>真实数据试算入口</h3></div><span class="version">最小闭环 · 当前页面试算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：先选择系统现有产品，输入试算数量、期望交期和试算日期，再读取系统现有 BOM、库存和采购周期生成一次性试算结果。</p><p>本步骤不是正式订单模块，不保存正式订单或订单评估记录，不占用或扣减库存，不生成采购单，也不进入财务。</p></div></article><article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>当前试算链路</h3><div class="workflow-steps"><span>系统现有产品</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>仓库确认点</span></div><p>链路只在当前页面运行，不保存、不占用、不扣减、不生成、不进入财务。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">不保存 · 不占用 · 不生成 · 不进财务</span></div><div class="placeholder-copy"><p>当前试算不会保存正式订单，不保存订单评估记录，不占用库存，不扣减库存，不生成采购单，不生成付款申请，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialForm}${realDataTrialResultPanel()}${amountCostPlaceholder}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE</span><h3>试算条件与数据来源</h3></div><span class="version">${futureInputs.length} 类资料</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>当前阶段不读取临时导入文件，不写入正式基础资料；如需导入 BOM、库存或价格，应进入后续阶段单独设计。</p></div></article></div>`;
 }
@@ -538,7 +550,7 @@ function warehouseAlertsPage() {
 function deliveryRiskPage() {
   const products = productService.listProducts();
   const productOptions = products.map((product) => `<option value="${product.id}" ${product.id === deliveryRiskInputState.selectedProductId ? 'selected' : ''}>${product.code} · ${product.name}</option>`).join('');
-  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 6 DEMO</span><strong>下单前交期与采购分析</strong><p>本页用于判断 HE-110S 小型款 300 台急单能否按 15 天交付。系统按该型号 BOM 展开需求，结合库存、安全库存、采购周期和仓库反馈，给出只读判断：本单可以有条件推进，但不建议直接乐观承诺。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 300" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="placeholder-copy"><p>当前已默认带入演示订单，可手动修改条件重新分析；默认值不代表真实订单已保存。</p></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${riskSourceSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>本单分析依据与边界</h3><div class="workflow-steps"><span>HE-110S 需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>+</b><span>仓库反馈</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
+  return `<div class="skeleton-notice"><div><span class="eyebrow">LUFUTA LITE / PHASE 6 DEMO</span><strong>下单前交期与采购分析</strong><p>本页用于判断 HE-110S 小型款 300 台急单能否按 15 天交付。系统按该型号 BOM 展开需求，结合库存、安全库存、采购周期和仓库反馈，给出只读判断：本单可以有条件推进，但不建议直接乐观承诺。</p></div><span class="phase-chip">只读分析</span></div><form class="panel"><div class="panel-head"><div><span class="kicker">分析输入</span><h3>分析条件</h3></div><span class="version">仅用于本次判断</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-delivery-risk-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="0" step="1" placeholder="例如 300" value="${deliveryRiskInputState.plannedQty}" data-delivery-risk-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${deliveryRiskInputState.requiredDate}" data-delivery-risk-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${deliveryRiskInputState.asOfDate}" data-delivery-risk-input /></label></div><div class="placeholder-copy"><p>当前已默认带入演示订单，可手动修改条件重新分析；默认值不代表真实订单已保存。</p></div><div class="modal-actions"><button class="primary" type="button" data-action="delivery-risk-placeholder">分析交期风险</button></div></form>${orderDecisionSummaryPanel()}${riskSourceSummaryPanel()}${deliveryFeasibilityPanel()}${procurementPriorityGroupsPanel()}${warehouseFeedbackReferencePanel()}${deliveryRiskPreviewPanel()}<article class="panel workflow-panel"><span class="kicker">分析口径</span><h3>本单分析依据与边界</h3><div class="workflow-steps"><span>HE-110S 需求</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>+</b><span>仓库反馈</span><b>→</b><span>交期风险</span></div><p>结果仅供下单前判断，不代表已排产、已承诺交期或已创建采购任务；系统不保存订单、不修改库存。</p></article>`;
 }
 
 function orderDecisionSummaryPanel() {
@@ -905,8 +917,8 @@ function handleAction(action, dataset) {
     if (!deliveryRiskInputState.plannedQty || Number(deliveryRiskInputState.plannedQty) <= 0) return toast('请输入有效计划数量');
     if (!deliveryRiskInputState.requiredDate) return toast('请选择期望交期');
     if (!deliveryRiskInputState.asOfDate) return toast('请选择分析日期');
-    if (!isValidDateInputValue(deliveryRiskInputState.requiredDate)) return toast('请选择有效期望交期');
-    if (!isValidDateInputValue(deliveryRiskInputState.asOfDate)) return toast('请选择有效分析日期');
+    const dateError = validateTrialDateInputs({ requiredDate: deliveryRiskInputState.requiredDate, asOfDate: deliveryRiskInputState.asOfDate });
+    if (dateError) return toast(dateError);
     const plannedQty = Number(deliveryRiskInputState.plannedQty);
     const rows = buildTrialRowsFromExistingData({ product, plannedQty, requiredDate: deliveryRiskInputState.requiredDate, asOfDate: deliveryRiskInputState.asOfDate });
     deliveryRiskPreview = { product, plannedQty, requiredDate: deliveryRiskInputState.requiredDate, asOfDate: deliveryRiskInputState.asOfDate, rows };
@@ -918,12 +930,12 @@ function handleAction(action, dataset) {
       realDataTrialInputState[input.name] = input.value;
     });
     const product = productService.listProducts().find((item) => item.id === realDataTrialInputState.selectedProductId);
+    const dateError = validateTrialDateInputs({ requiredDate: realDataTrialInputState.requiredDate, asOfDate: realDataTrialInputState.asOfDate, asOfLabel: '试算日期' });
     if (!product) realDataTrialError = '请选择产品';
     else if (!realDataTrialInputState.plannedQty || Number(realDataTrialInputState.plannedQty) <= 0) realDataTrialError = '请输入有效试算数量';
     else if (!realDataTrialInputState.requiredDate) realDataTrialError = '请选择期望交期';
     else if (!realDataTrialInputState.asOfDate) realDataTrialError = '请选择试算日期';
-    else if (!isValidDateInputValue(realDataTrialInputState.requiredDate)) realDataTrialError = '请选择有效期望交期';
-    else if (!isValidDateInputValue(realDataTrialInputState.asOfDate)) realDataTrialError = '请选择有效试算日期';
+    else if (dateError) realDataTrialError = dateError;
     else {
       const plannedQty = Number(realDataTrialInputState.plannedQty);
       const rows = buildTrialRowsFromExistingData({ product, plannedQty, requiredDate: realDataTrialInputState.requiredDate, asOfDate: realDataTrialInputState.asOfDate });
