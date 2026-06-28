@@ -290,6 +290,12 @@ const PAGE_OVERFLOW_GUARD_STYLE = `<style id="page-overflow-guard">
   [data-delivery-risk-preview] .soft-tag,
   [data-delivery-risk-preview] .stock-level,
   [data-procurement-recommendation-view] .soft-tag { white-space:normal; }
+  [data-real-data-trial-source] .entry-card { cursor:pointer; transition:border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease; }
+  [data-real-data-trial-source] .entry-card:hover { border-color:#2563eb; box-shadow:0 10px 24px rgba(37,99,235,.14); transform:translateY(-1px); }
+  [data-real-data-trial-source] .entry-card[aria-pressed="true"] { border:2px solid #2563eb; background:#eff6ff; box-shadow:0 0 0 3px rgba(37,99,235,.14); }
+  [data-real-data-trial-source] .entry-card[aria-pressed="true"] strong { color:#1d4ed8; }
+  [data-real-data-trial-source] .source-mode-badge { display:inline-flex; width:max-content; max-width:100%; margin-bottom:6px; padding:3px 8px; border-radius:6px; background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:700; line-height:1.3; white-space:normal; }
+  [data-real-data-trial-source] .source-mode-note { border-left:3px solid #2563eb; background:#f8fafc; overflow-wrap:anywhere; }
   @media (max-width:720px) { main { max-width:calc(100vw - 70px); } }
 </style>`;
 
@@ -751,11 +757,17 @@ function realDataTrialResultPanel() {
 function realDataTrialSourcePanel() {
   // BOUNDARY_NOTICE: 数据来源选择只切换当前页面试算输入，不保存正式资料或触发业务动作。
   const sources = [
-    [REAL_DATA_TRIAL_SOURCE_SYSTEM, '使用系统现有产品 / BOM / 库存', '读取系统现有资料做一次性试算，不导入、不修改基础数据。', 'layers'],
+    [REAL_DATA_TRIAL_SOURCE_SYSTEM, '系统现有资料试算', '读取已维护的产品、BOM、库存和采购周期，仅用于本次试算。', 'layers'],
     [REAL_DATA_TRIAL_SOURCE_TEMPORARY, '手动输入临时试算数据', '手动输入临时产品和物料，用于资料未维护完整时的一次性风险测试。', 'edit'],
   ];
+  const currentModeCopy = realDataTrialInputState.source === REAL_DATA_TRIAL_SOURCE_TEMPORARY
+    ? '当前使用手动输入的临时产品和物料数据进行一次性试算，数据不会保存为正式资料。'
+    : '当前使用系统已维护的产品、BOM、库存和采购周期进行一次性试算。';
 
-  return `<article class="panel" data-real-data-trial-source style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE MODE</span><h3>试算数据来源</h3></div><span class="version">默认使用系统资料</span></div><div class="entry-grid">${sources.map(([value, title, copy, ico]) => `<button class="entry-card" type="button" data-action="set-real-data-trial-source" data-source="${value}" aria-pressed="${realDataTrialInputState.source === value}">${icon(ico, 22)}<span><strong>${realDataTrialInputState.source === value ? '当前：' : ''}${title}</strong><small>${copy}</small></span></button>`).join('')}</div><div class="placeholder-copy"><p>两种模式都只在当前页面生成一次性试算结果，不保存正式资料、不影响库存、不创建采购单。</p></div></article>`;
+  return `<article class="panel" data-real-data-trial-source style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE MODE</span><h3>试算数据来源</h3></div><span class="version">默认使用系统资料</span></div><div class="entry-grid">${sources.map(([value, title, copy, ico]) => {
+    const selected = realDataTrialInputState.source === value;
+    return `<button class="entry-card" type="button" data-action="set-real-data-trial-source" data-source="${value}" aria-pressed="${selected}">${icon(ico, 22)}<span>${selected ? '<small class="source-mode-badge">当前模式</small>' : ''}<strong>${title}</strong><small>${copy}</small></span></button>`;
+  }).join('')}</div><div class="placeholder-copy source-mode-note"><p>${currentModeCopy}</p><p>两种模式都只在当前页面生成一次性试算结果，不跳转 BOM 页面，不保存正式资料、不影响库存、不创建采购单。</p></div></article>`;
 }
 
 function realDataTrialSystemForm(productOptions) {
