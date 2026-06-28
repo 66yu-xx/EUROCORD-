@@ -51,6 +51,7 @@ const TRIAL_DATE_MAX = '2100-12-31';
 const TRIAL_EVALUATION_RECORDS_KEY = 'lufuta.trialEvaluationRecords.v1';
 let latestTrialEvaluationRecord = readTrialEvaluationRecords()[0] || null;
 let expandedTrialEvaluationRecordId = '';
+let pendingClearLocalEvaluationRecords = false;
 
 function formatDateInputValue(date) {
   const year = date.getFullYear();
@@ -560,6 +561,20 @@ function writeTrialEvaluationRecords(records) {
   }
 }
 
+function clearLocalTrialEvaluationRecords() {
+  // DEMO_ONLY / BOUNDARY_NOTICE: This clears only local test evaluation records from the current browser.
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    localStorage.removeItem(TRIAL_EVALUATION_RECORDS_KEY);
+    latestTrialEvaluationRecord = null;
+    expandedTrialEvaluationRecordId = '';
+    pendingClearLocalEvaluationRecords = false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function trialEvaluationRecordId(date = new Date()) {
   const stamp = date.toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
   return `EV-TRIAL-${stamp}-${String(date.getMilliseconds()).padStart(3, '0')}`;
@@ -650,6 +665,9 @@ function savedEvaluationRecordListPanel() {
   // BOUNDARY_NOTICE / TRANSITION_COPY: LocalStorage records are read-only local references, not formal orders or workflow state.
   const records = readTrialEvaluationRecords();
   const emptyState = '<div class="empty-table"><strong>暂无已保存评估记录</strong><p>完成一次试算后，可保存为评估记录用于后续复查。</p></div>';
+  const clearAction = pendingClearLocalEvaluationRecords
+    ? '<div class="placeholder-copy" data-clear-local-evaluation-confirm><p>这只会清空当前浏览器本地保存的接单评估记录，不影响正式订单、库存或采购数据。是否继续？</p><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="secondary" type="button" data-action="cancel-clear-local-evaluation-records">取消</button><button class="primary" type="button" data-action="confirm-clear-local-evaluation-records">确认清空</button></div></div>'
+    : '<div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="secondary" type="button" data-action="clear-local-evaluation-records">清空本地评估记录</button></div>';
   const rows = records.map((record) => {
     const expanded = expandedTrialEvaluationRecordId === record.id;
     const statusText = record.status || '待确认';
@@ -663,7 +681,7 @@ function savedEvaluationRecordListPanel() {
     return `<article class="entry-card" data-saved-evaluation-record="${record.id}" style="align-items:flex-start"><span>${icon('chart', 22)}</span><span><strong>${record.id || '待编号'} · ${record.productName || '待确认产品'}</strong><small>创建时间：${formatRecordCreatedAt(record.createdAt)} · 数据来源：${record.sourceLabel || trialEvaluationSourceLabel(record.source)} · 计划数量：${format(record.plannedQty || 0)} 台 · 期望交期：${record.requiredDate || '待确认'} · 状态：${statusText}：${statusHint}</small><small>${record.conclusion || '暂无整体风险结论'}</small><button class="secondary" type="button" data-action="toggle-saved-evaluation-summary" data-id="${record.id}" style="margin-top:10px">${expanded ? '收起摘要' : '查看摘要'}</button>${detail}</span></article>`;
   }).join('');
 
-  return `<article class="panel" data-saved-evaluation-records style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">SAVED EVALUATION RECORDS</span><h3>已保存评估记录</h3></div><span class="version">${records.length} 条 · 只读</span></div><div class="placeholder-copy"><p>以下记录为当前浏览器本地保存的接单评估记录，仅用于接单前复查和内部沟通，不代表正式订单，不影响库存，不创建采购单。</p><p>本区只读取 LocalStorage 中的摘要记录，不提供删除、作废、正式业务转换或修改状态操作。</p></div>${records.length ? `<div class="entry-grid">${rows}</div>` : emptyState}</article>`;
+  return `<article class="panel" data-saved-evaluation-records style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">SAVED EVALUATION RECORDS</span><h3>已保存评估记录</h3></div><span class="version">${records.length} 条 · 只读</span></div><div class="placeholder-copy"><p>以下记录为当前浏览器本地保存的接单评估记录，仅用于接单前复查和内部沟通，不代表正式订单，不影响库存，不创建采购单。</p><p>本区只读取 LocalStorage 中的摘要记录，不提供作废、正式业务转换或修改状态操作。</p><p>仅清空当前浏览器本地保存的评估记录，不影响系统基础资料。</p></div>${clearAction}${records.length ? `<div class="entry-grid">${rows}</div>` : emptyState}</article>`;
 }
 
 function evaluationRecordStatusBoundaryPanel() {
@@ -1347,6 +1365,23 @@ function handleAction(action, dataset) {
     expandedTrialEvaluationRecordId = expandedTrialEvaluationRecordId === dataset.id ? '' : dataset.id;
     render();
     return;
+  }
+  if (action === 'clear-local-evaluation-records') {
+    // DEMO_ONLY / BOUNDARY_NOTICE: Test cleanup confirmation only; it does not delete formal orders or business records.
+    pendingClearLocalEvaluationRecords = true;
+    render();
+    return;
+  }
+  if (action === 'cancel-clear-local-evaluation-records') {
+    pendingClearLocalEvaluationRecords = false;
+    render();
+    return;
+  }
+  if (action === 'confirm-clear-local-evaluation-records') {
+    // DEMO_ONLY / BOUNDARY_NOTICE: Test cleanup only; it does not delete formal orders or business records.
+    if (!clearLocalTrialEvaluationRecords()) return toast('浏览器本地评估记录清理不可用，请稍后再试');
+    render();
+    return toast('已清空当前浏览器本地评估记录，不影响系统基础资料。');
   }
   if (action === 'run-real-data-trial') {
     if (realDataTrialInputState.source === REAL_DATA_TRIAL_SOURCE_TEMPORARY) {
