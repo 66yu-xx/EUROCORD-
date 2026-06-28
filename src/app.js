@@ -356,6 +356,81 @@ function realDataTrialWarehousePoints(rows) {
   return points.length ? points : ['当前试算未发现需要仓库优先确认的物料。'];
 }
 
+function realDataTrialRiskReasons(row) {
+  const reasons = [];
+  if (row.shortageQty > 0) reasons.push(`缺料 ${format(row.shortageQty)} ${row.material.unit}`);
+  if (row.quantityRisk === 'low') reasons.push('库存低于安全库存或余量不足');
+  if (row.procurementLeadTimeDays === null) reasons.push('采购周期缺失');
+  else if (row.shortageQty > 0 && (row.riskLevel === 'critical' || row.riskLevel === 'warning')) reasons.push('采购周期需要确认');
+  return reasons;
+}
+
+function realDataTrialDecisionSummary(rows) {
+  const total = rows.length;
+  const covered = rows.filter((row) => row.shortageQty <= 0).length;
+  const shortage = rows.filter((row) => row.shortageQty > 0).length;
+  const lowStock = rows.filter((row) => row.quantityRisk === 'low').length;
+  const missingLeadTime = rows.filter((row) => row.procurementLeadTimeDays === null).length;
+  const longLeadTime = rows.filter((row) => row.shortageQty > 0 && row.procurementLeadTimeDays !== null && (row.riskLevel === 'critical' || row.riskLevel === 'warning')).length;
+  const hasRisk = shortage > 0 || lowStock > 0 || missingLeadTime > 0 || longLeadTime > 0;
+  const riskSources = [
+    shortage > 0 ? '缺料物料' : '',
+    lowStock > 0 ? '库存低或安全库存不足' : '',
+    missingLeadTime > 0 ? '采购周期缺失' : '',
+    longLeadTime > 0 ? '采购周期较长或需要交期确认' : '',
+  ].filter(Boolean);
+  const conclusion = hasRisk
+    ? `当前试算订单存在物料 / 交期风险，主要来自${riskSources.join('、')}。建议先确认缺料、库存和采购周期，再作为接单或排期参考。`
+    : '当前试算订单从物料角度看风险较低，但仍需仓库确认实际库存，并由计划确认生产排期。';
+
+  return { total, covered, shortage, lowStock, missingLeadTime, longLeadTime, hasRisk, riskSources, conclusion };
+}
+
+function realDataTrialDecisionSummaryPanel(rows) {
+  const summary = realDataTrialDecisionSummary(rows);
+  const sourceText = summary.riskSources.length ? summary.riskSources.join('、') : '暂无明显集中风险来源';
+  const metrics = [
+    ['BOM 物料', `${format(summary.total)} 项`, '本次试算展开的系统现有 BOM 物料数量。'],
+    ['库存可覆盖', `${format(summary.covered)} 项`, '账面库存可覆盖本次需求，仍建议仓库确认实际可用数量。'],
+    ['存在缺口', `${format(summary.shortage)} 项`, '当前试算显示库存不足，需要优先确认。'],
+    ['需要关注', `${format(summary.lowStock)} 项`, '库存低于安全库存或余量不足，排期前建议复核。'],
+  ];
+
+  return `<article class="panel" data-real-data-trial-decision-summary style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">DECISION SUMMARY</span><h3>试算结论摘要</h3></div><span class="version">只读解释 · 不保存结果</span></div><div class="placeholder-copy"><p>${summary.conclusion}</p><p>风险来源参考：${sourceText}。本摘要只解释当前页面试算结果，不保存，不影响库存，不生成采购单。</p></div><div class="entry-grid">${metrics.map(([title, value, copy]) => `<div class="entry-card">${icon('chart', 22)}<span><strong>${title}：${value}</strong><small>${copy}</small></span></div>`).join('')}</div></article>`;
+}
+
+function realDataTrialKeyRiskPanel(rows) {
+  const riskRows = rows
+    .map((row) => ({ row, reasons: realDataTrialRiskReasons(row) }))
+    .filter((item) => item.reasons.length)
+    .sort((a, b) => {
+      const shortageDelta = Number(b.row.shortageQty > 0) - Number(a.row.shortageQty > 0);
+      if (shortageDelta) return shortageDelta;
+      const missingLeadTimeDelta = Number(b.row.procurementLeadTimeDays === null) - Number(a.row.procurementLeadTimeDays === null);
+      if (missingLeadTimeDelta) return missingLeadTimeDelta;
+      return Number(b.row.quantityRisk === 'low') - Number(a.row.quantityRisk === 'low');
+    })
+    .slice(0, 5);
+
+  const content = riskRows.length
+    ? `<div class="entry-grid">${riskRows.map(({ row, reasons }) => `<div class="entry-card">${icon('warehouse', 22)}<span><strong>${row.material.code} · ${row.material.name}</strong><small>风险原因：${reasons.join('、')}。${row.shortageQty > 0 ? '建议优先确认缺口数量和到料时间，可能影响交期。' : row.procurementLeadTimeDays === null ? '需确认采购周期，并由仓库确认实际库存。' : '建议关注安全库存和实际可用数量。'}</small></span></div>`).join('')}</div>`
+    : '<div class="empty-table"><strong>暂无明显关键风险物料，仍建议以仓库实际库存为准</strong><p>当前仅代表本次页面试算结果，不等于正式生产计划或采购需求。</p></div>';
+
+  return `<article class="panel" data-real-data-trial-key-risks style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">KEY MATERIAL RISKS</span><h3>关键风险物料摘要</h3></div><span class="version">优先显示前 ${riskRows.length || 0} 项</span></div><div class="placeholder-copy"><p>本区用于提示需要优先关注的物料，优先显示存在缺口的物料，其次显示库存低于安全库存或采购周期需要确认的物料。</p></div>${content}</article>`;
+}
+
+function realDataTrialRoleFocusPanel(rows) {
+  const summary = realDataTrialDecisionSummary(rows);
+  const riskLabel = summary.hasRisk ? '当前订单存在物料 / 交期风险，建议先确认缺料和交期后再作为接单判断参考。' : '当前物料风险较低，可作为接单判断参考之一，但仍需人工确认库存和排期。';
+  const roles = [
+    ['老板关注', riskLabel],
+    ['计划关注', '生产排期前需确认缺口物料、库存低物料和采购周期待确认物料；本结果不等于正式生产计划。'],
+    ['采购关注', '建议优先确认缺口物料，其次确认采购周期缺失或库存低于安全库存的物料；本结果不等于采购单或采购需求。'],
+  ];
+
+  return `<article class="panel" data-real-data-trial-role-focus style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">ROLE FOCUS</span><h3>角色关注点</h3></div><span class="version">老板 / 计划 / 采购</span></div><div class="entry-grid">${roles.map(([title, copy]) => `<div class="entry-card">${icon('layers', 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>本结果仅为一次性试算，不保存，不影响库存，不生成采购单。</p></div></article>`;
+}
+
 function realDataTrialResultPanel() {
   if (!realDataTrialPreview) return '';
 
@@ -364,11 +439,12 @@ function realDataTrialResultPanel() {
   if (!rows.length) return `<div data-real-data-trial-results>${summary}<article class="panel" style="margin-bottom:18px"><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成试算结果</strong><p>请先确认系统现有产品 BOM 资料。本页面不会导入 BOM，也不会修改正式 BOM。</p></div></article></div>`;
 
   const shortageRows = rows.filter((row) => row.shortageQty > 0 || row.quantityRisk === 'low');
+  const decisionLayer = `${realDataTrialDecisionSummaryPanel(rows)}${realDataTrialKeyRiskPanel(rows)}${realDataTrialRoleFocusPanel(rows)}`;
   const shortageTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">SHORTAGE RESULT</span><h3>缺料结果</h3></div><span class="version">${rows.length} 项物料</span></div>${tableScrollHint()}<div class="table-wrap" style="${LOCAL_TABLE_SCROLL_STYLE}"><table style="min-width:760px"><thead><tr><th>物料</th><th>单位用量</th><th>总需求</th><th>当前库存</th><th>缺口数量</th><th>安全库存状态</th></tr></thead><tbody>${rows.map((row) => `<tr><td><strong class="code">${row.material.code}</strong><br>${row.material.name}</td><td>${format(row.qtyPerProduct)} ${row.material.unit}</td><td><strong>${format(row.requiredQty)}</strong> ${row.material.unit}</td><td>${format(row.stockQty)} ${row.material.unit}</td><td><strong class="${row.shortageQty > 0 ? 'danger-text' : 'muted'}">${format(row.shortageQty)}</strong> ${row.material.unit}</td><td><span class="soft-tag">${realDataTrialSafetyStatus(row)}</span></td></tr>`).join('')}</tbody></table></div></article>`;
   const riskTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">DELIVERY RISK</span><h3>交期风险</h3></div><span class="version">只读判断</span></div>${tableScrollHint()}<div class="table-wrap" style="${LOCAL_TABLE_SCROLL_STYLE}"><table style="min-width:860px"><thead><tr><th>物料</th><th>库存是否可覆盖</th><th>采购周期是否足够</th><th>预计到料时间</th><th>风险等级</th><th>风险原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.shortageQty > 0 ? '库存不足' : '库存可覆盖'}</td><td>${row.procurementLeadTimeDays === null ? '采购周期缺失，需人工确认' : row.riskLevel === 'critical' ? '预计不足' : '当前判断可参考'}</td><td>${row.expectedArrivalDate || (row.procurementLeadTimeDays === null ? '待确认' : '无需采购')}</td><td><span class="soft-tag">${row.deliveryRiskLabel}</span></td><td>${row.deliveryRiskReason}</td></tr>`).join('')}</tbody></table></div></article>`;
   const recommendationTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">PROCUREMENT SUGGESTION</span><h3>采购建议</h3></div><span class="version">不生成采购单</span></div><div class="placeholder-copy"><p>采购建议只用于本次试算阅读，不保存建议，不生成采购单，不进入采购流程。</p></div>${tableScrollHint()}<div class="table-wrap" style="${LOCAL_TABLE_SCROLL_STYLE}"><table style="min-width:780px"><thead><tr><th>物料</th><th>建议动作</th><th>建议采购数量</th><th>优先级</th><th>原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.recommendation.action}</td><td><strong>${format(row.recommendation.recommendedQty)}</strong> ${row.material.unit}</td><td><span class="soft-tag">${row.recommendation.priority}</span></td><td>${row.recommendation.reason}</td></tr>`).join('')}</tbody></table></div></article>`;
   const warehousePoints = `<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE CHECK</span><h3>仓库确认点</h3></div><span class="version">${shortageRows.length} 项关注</span></div><div class="entry-grid">${realDataTrialWarehousePoints(rows).map((point) => `<div class="entry-card">${icon('warehouse', 22)}<span><strong>${point}</strong><small>仅提示人工确认，不修改库存台账。</small></span></div>`).join('')}</div></article>`;
-  return `<div data-real-data-trial-results>${summary}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}</div>`;
+  return `<div data-real-data-trial-results>${summary}${decisionLayer}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}</div>`;
 }
 
 function realDataTrialPage() {
