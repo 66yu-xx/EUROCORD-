@@ -89,6 +89,32 @@ function createTemporaryTrialMaterialRow() {
   return { code: '', name: '', qtyPerProduct: '', stockQty: '', safetyStock: '', procurementLeadTimeDays: '' };
 }
 
+function resetTemporaryTrialInputState() {
+  temporaryTrialInputState.productName = '';
+  temporaryTrialInputState.plannedQty = '';
+  temporaryTrialInputState.requiredDate = '';
+  temporaryTrialInputState.asOfDate = formatDateInputValue(new Date());
+  temporaryTrialInputState.materials = [createTemporaryTrialMaterialRow()];
+  realDataTrialError = '';
+  realDataTrialPreview = null;
+}
+
+function fillTemporaryTrialDemoData() {
+  // DEMO_ONLY: 示例数据只填充当前页面临时输入框，不写入正式产品、BOM、库存或订单记录。
+  temporaryTrialInputState.productName = '临时壁挂取暖器订单';
+  temporaryTrialInputState.plannedQty = '80';
+  temporaryTrialInputState.asOfDate = formatDateInputValue(new Date());
+  temporaryTrialInputState.requiredDate = formatDateInputValue(addDays(new Date(), 14));
+  temporaryTrialInputState.materials = [
+    { code: 'TMP-PCB-01', name: '临时控制板', qtyPerProduct: '1', stockQty: '35', safetyStock: '10', procurementLeadTimeDays: '16' },
+    { code: 'TMP-SHELL-01', name: '临时外壳组件', qtyPerProduct: '1', stockQty: '90', safetyStock: '20', procurementLeadTimeDays: '' },
+    { code: 'TMP-SCREW-01', name: '临时螺丝包', qtyPerProduct: '4', stockQty: '360', safetyStock: '80', procurementLeadTimeDays: '3' },
+    { code: 'TMP-LABEL-01', name: '临时标签', qtyPerProduct: '1', stockQty: '200', safetyStock: '20', procurementLeadTimeDays: '2' },
+  ];
+  realDataTrialError = '';
+  realDataTrialPreview = null;
+}
+
 function toOptionalNonNegativeNumber(value, fallback = 0) {
   if (value === '' || value === null || value === undefined) return fallback;
   return Number(value);
@@ -97,10 +123,10 @@ function toOptionalNonNegativeNumber(value, fallback = 0) {
 function validateTemporaryTrialInputs() {
   const productName = temporaryTrialInputState.productName.trim();
   const plannedQty = Number(temporaryTrialInputState.plannedQty);
-  if (!productName) return '请输入临时产品名称';
-  if (!temporaryTrialInputState.plannedQty || !Number.isFinite(plannedQty) || plannedQty <= 0) return '请输入大于 0 的计划数量';
-  if (!temporaryTrialInputState.requiredDate) return '请选择期望交期';
-  if (!temporaryTrialInputState.asOfDate) return '请选择分析日期';
+  if (!productName) return '产品名称不能为空';
+  if (!temporaryTrialInputState.plannedQty || !Number.isFinite(plannedQty) || plannedQty <= 0) return '计划数量必须大于 0';
+  if (!temporaryTrialInputState.requiredDate) return '期望交期不能为空';
+  if (!temporaryTrialInputState.asOfDate) return '分析日期不能为空';
   const dateError = validateTrialDateInputs({ requiredDate: temporaryTrialInputState.requiredDate, asOfDate: temporaryTrialInputState.asOfDate });
   if (dateError) return dateError;
   if (!temporaryTrialInputState.materials.length) return '至少需要一条临时物料行';
@@ -112,11 +138,11 @@ function validateTemporaryTrialInputs() {
     const stockQty = Number(row.stockQty);
     const safetyStock = toOptionalNonNegativeNumber(row.safetyStock, 0);
     const procurementLeadTimeDays = row.procurementLeadTimeDays === '' ? null : Number(row.procurementLeadTimeDays);
-    if (!row.name.trim()) return `${rowLabel}请输入物料名称`;
+    if (!row.name.trim()) return `${rowLabel}名称不能为空`;
     if (!row.qtyPerProduct || !Number.isFinite(qtyPerProduct) || qtyPerProduct <= 0) return `${rowLabel}单台用量必须大于 0`;
     if (row.stockQty === '' || !Number.isFinite(stockQty) || stockQty < 0) return `${rowLabel}当前库存不能小于 0`;
     if (!Number.isFinite(safetyStock) || safetyStock < 0) return `${rowLabel}安全库存不能小于 0`;
-    if (procurementLeadTimeDays !== null && (!Number.isFinite(procurementLeadTimeDays) || procurementLeadTimeDays < 0)) return `${rowLabel}采购周期天数不能小于 0`;
+    if (procurementLeadTimeDays !== null && (!Number.isFinite(procurementLeadTimeDays) || procurementLeadTimeDays < 0)) return `${rowLabel}采购周期必须为 0 或正数，或留空表示待确认`;
   }
 
   return '';
@@ -557,6 +583,7 @@ function realDataTrialResultPanel() {
 }
 
 function realDataTrialSourcePanel() {
+  // BOUNDARY_NOTICE: 数据来源选择只切换当前页面试算输入，不保存正式资料或触发业务动作。
   const sources = [
     [REAL_DATA_TRIAL_SOURCE_SYSTEM, '使用系统现有产品 / BOM / 库存', '读取系统现有资料做一次性试算，不导入、不修改基础数据。', 'layers'],
     [REAL_DATA_TRIAL_SOURCE_TEMPORARY, '手动输入临时试算数据', '手动输入临时产品和物料，用于资料未维护完整时的一次性风险测试。', 'edit'],
@@ -574,7 +601,8 @@ function temporaryTrialMaterialRowsForm() {
 }
 
 function realDataTrialTemporaryForm() {
-  return `<article class="panel" data-temp-trial-form style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TEMPORARY TRIAL</span><h3>临时产品信息</h3></div><span class="version">仅当前页面一次性测试</span></div><div class="modal-body"><label class="field"><span>临时产品名称</span><input name="productName" value="${temporaryTrialInputState.productName}" placeholder="请输入临时产品名称" data-temp-trial-input /></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="1" step="1" value="${temporaryTrialInputState.plannedQty}" placeholder="必须大于 0" data-temp-trial-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${temporaryTrialInputState.requiredDate}" data-temp-trial-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${temporaryTrialInputState.asOfDate}" data-temp-trial-input /></label></div>${realDataTrialError ? `<div class="placeholder-copy" data-real-data-trial-error><p class="danger-text">${realDataTrialError}</p></div>` : ''}<div class="placeholder-copy"><p>当前结果基于手动输入的临时数据生成，仅用于一次性测试；不会保存为正式产品、正式物料、正式 BOM、正式库存或正式订单。</p></div></article><article class="panel" data-temp-trial-materials style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">TEMP MATERIALS</span><h3>临时物料行</h3></div><button class="secondary" type="button" data-action="add-temp-trial-material">${icon('plus', 16)} 添加物料行</button></div><div class="placeholder-copy"><p>至少保留一行物料输入。采购周期为空时表示待确认，不会生成采购需求或采购单。</p></div>${temporaryTrialMaterialRowsForm()}<div class="modal-actions"><button class="primary" type="button" data-action="run-real-data-trial">${icon('chart', 17)} 开始临时试算</button></div></article>`;
+  // BOUNDARY_NOTICE / TRANSITION_COPY: 临时输入边界说明未来正式版可精简或替换。
+  return `<article class="panel" data-temp-trial-form style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TEMPORARY TRIAL</span><h3>临时产品信息</h3></div><span class="version">仅当前页面一次性测试</span></div><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="secondary" type="button" data-action="fill-temp-trial-demo">${icon('plus', 16)} 填入示例数据</button><button class="secondary" type="button" data-action="clear-temp-trial-data">清空临时数据</button></div><div class="modal-body"><label class="field"><span>临时产品名称</span><input name="productName" value="${temporaryTrialInputState.productName}" placeholder="请输入临时产品名称" data-temp-trial-input /></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="1" step="1" value="${temporaryTrialInputState.plannedQty}" placeholder="必须大于 0" data-temp-trial-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${temporaryTrialInputState.requiredDate}" data-temp-trial-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${temporaryTrialInputState.asOfDate}" data-temp-trial-input /></label></div>${realDataTrialError ? `<div class="placeholder-copy" data-real-data-trial-error><p class="danger-text">${realDataTrialError}</p></div>` : ''}<div class="placeholder-copy"><p>临时输入数据仅用于本次试算，不会保存为正式物料、BOM、库存或订单记录。</p></div></article><article class="panel" data-temp-trial-materials style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">TEMP MATERIALS</span><h3>临时物料行</h3></div><button class="secondary" type="button" data-action="add-temp-trial-material">${icon('plus', 16)} 添加物料行</button></div><div class="placeholder-copy"><p>至少保留一行物料输入。采购周期为空时表示待确认，不会生成采购需求或采购单。</p></div>${temporaryTrialMaterialRowsForm()}<div class="modal-actions" style="flex-wrap:wrap"><button class="primary" type="button" data-action="run-real-data-trial">${icon('chart', 17)} 开始临时试算</button></div></article>`;
 }
 
 function realDataTrialPage() {
@@ -1056,6 +1084,17 @@ function handleAction(action, dataset) {
     temporaryTrialInputState.materials.push(createTemporaryTrialMaterialRow());
     realDataTrialError = '';
     realDataTrialPreview = null;
+    render();
+    return;
+  }
+  if (action === 'fill-temp-trial-demo') {
+    fillTemporaryTrialDemoData();
+    render();
+    return;
+  }
+  if (action === 'clear-temp-trial-data') {
+    // BOUNDARY_NOTICE: 清空只作用于当前临时输入，不删除或修改任何正式资料。
+    resetTemporaryTrialInputState();
     render();
     return;
   }
