@@ -671,6 +671,25 @@ function evaluationRecordStatusBoundaryPanel() {
   return `<article class="panel" data-evaluation-record-status-boundary style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">STATUS BOUNDARY</span><h3>评估记录状态说明</h3></div><span class="version">只读说明 · 不修改状态</span></div><div class="placeholder-copy"><p>当前版本只显示接单评估记录状态和状态含义，不提供作废、转订单、确认接单、删除或状态编辑操作。</p><p>状态不代表库存、采购、财务动作已发生；接单评估记录仍然不代表正式订单，不影响库存，不创建采购单。</p></div><div class="entry-grid">${statuses.map(([title, copy]) => `<div class="entry-card">${icon('grid', 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>`;
 }
 
+function evaluationWorkflowDemoPathPanel() {
+  // BOUNDARY_NOTICE / TRANSITION_COPY: This explains the current demo reading path only; it adds no business execution.
+  const steps = [
+    ['01 选择数据来源', '选择系统已有产品 / BOM / 库存，或在资料不完整时手动输入临时试算数据。', 'layers'],
+    ['02 完成一次试算', '查看物料风险、交期风险、关键风险物料，以及老板、计划、采购各自关注点。', 'chart'],
+    ['03 保存为评估记录', '把本次试算的输入条件和风险摘要保存为接单评估记录，用于接单前复查。', 'grid'],
+    ['04 复查历史摘要', '在已保存评估记录中查看历史判断、关键物料摘要，并展开或收起明细摘要。', 'warehouse'],
+    ['05 人工确认后再决策', '结合客户询单、库存实物、采购周期、计划排期和内部意见，未来再评估是否进入正式订单流程。', 'cart'],
+  ];
+  const scenarios = [
+    ['客户询单', '先快速判断物料和交期风险，再决定是否继续沟通。'],
+    ['接单前判断', '把一次性试算结论留作内部复查参考。'],
+    ['资料不完整', '新产品或基础资料未维护完整时，可先用临时输入做风险测试。'],
+    ['内部协同', '计划、采购、仓库确认前，用同一份摘要对齐风险来源。'],
+  ];
+
+  return `<article class="panel" data-evaluation-workflow-demo-path style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">EVALUATION WORKFLOW</span><h3>接单评估流程说明</h3></div><span class="version">演示路径 · 只读说明</span></div><div class="placeholder-copy"><p>当前接单评估闭环用于演示从一次性试算进入评估记录复查的阅读路径：先完成试算，再保存摘要记录，随后在本地记录中复查关键风险和状态含义。</p><p>接单评估记录不等于正式订单，不影响库存，不创建采购需求或采购单，不进入财务或成本；当前阶段仍是接单前评估和复查，不是业务执行。</p></div><div class="entry-grid">${steps.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><strong>适用场景</strong><p>${scenarios.map(([title, copy]) => `${title}：${copy}`).join('；')}</p></div></article>`;
+}
+
 function realDataTrialDecisionSummaryPanel(rows) {
   const summary = realDataTrialDecisionSummary(rows);
   const sourceText = summary.riskSources.length ? summary.riskSources.join('、') : '暂无明显集中风险来源';
@@ -802,8 +821,9 @@ function realDataTrialPage() {
   const latestRecordPanel = realDataTrialPreview ? '' : savedTrialEvaluationRecordPanel();
   const savedRecordsPanel = savedEvaluationRecordListPanel();
   const statusBoundaryPanel = evaluationRecordStatusBoundaryPanel();
+  const workflowDemoPathPanel = evaluationWorkflowDemoPathPanel();
 
-  return `${skeletonNotice('真实数据试算', '这里用于基于系统现有产品、BOM、库存和采购周期做一次性试算，或手动输入临时产品与物料数据做一次性风险测试。当前不导入新数据，不保存正式订单，不修改库存，不创建采购单，不进入财务。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 13</span><h3>真实数据试算入口</h3></div><span class="version">系统资料 / 临时录入 · 当前页面试算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：可读取系统现有 BOM、库存和采购周期，也可在资料未完整维护时手动输入临时试算数据。</p><p>本步骤不是正式订单模块，仅支持把本次试算摘要保存为接单评估记录并只读查看本地记录；不会保存临时产品、临时物料、临时 BOM 或临时库存，不影响或扣减库存，不创建采购单，也不进入财务。</p></div></article>${realDataTrialSourcePanel()}<article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>当前试算链路</h3><div class="workflow-steps"><span>系统现有资料或临时录入</span><b>+</b><span>BOM / 用量</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>仓库确认点</span></div><p>链路只在当前页面运行，保存评估记录也只保存摘要，不影响、不扣减、不创建采购单、不进入财务。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">摘要记录 · 只读列表 · 不进财务</span></div><div class="placeholder-copy"><p>当前试算不会保存正式订单，不保存临时资料，不影响库存，不扣减库存，不创建采购单，不创建采购需求，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。用户保存后只能在本页只读查看摘要级接单评估记录。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialForm}${latestRecordPanel}${savedRecordsPanel}${statusBoundaryPanel}${realDataTrialResultPanel()}${orderEvaluationBoundaryNotesPanel()}${amountCostPlaceholder}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE</span><h3>试算条件与数据来源</h3></div><span class="version">${futureInputs.length} 类资料</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>当前阶段不读取临时导入文件，不写入正式基础资料；手动输入的临时数据只存在于当前页面状态，刷新后不会作为正式资料存在。</p></div></article></div>`;
+  return `${skeletonNotice('真实数据试算', '这里用于基于系统现有产品、BOM、库存和采购周期做一次性试算，或手动输入临时产品与物料数据做一次性风险测试。当前不导入新数据，不保存正式订单，不修改库存，不创建采购单，不进入财务。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 14</span><h3>真实数据试算入口</h3></div><span class="version">系统资料 / 临时录入 · 当前页面试算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：可读取系统现有 BOM、库存和采购周期，也可在资料未完整维护时手动输入临时试算数据。</p><p>本步骤不是正式订单模块，仅支持把本次试算摘要保存为接单评估记录并只读查看本地记录；不会保存临时产品、临时物料、临时 BOM 或临时库存，不影响或扣减库存，不创建采购单，也不进入财务。</p></div></article>${workflowDemoPathPanel}${realDataTrialSourcePanel()}<article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>当前试算链路</h3><div class="workflow-steps"><span>系统现有资料或临时录入</span><b>+</b><span>BOM / 用量</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>仓库确认点</span></div><p>链路只在当前页面运行，保存评估记录也只保存摘要，不影响、不扣减、不创建采购单、不进入财务。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">摘要记录 · 只读列表 · 不进财务</span></div><div class="placeholder-copy"><p>当前试算不会保存正式订单，不保存临时资料，不影响库存，不扣减库存，不创建采购单，不创建采购需求，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。用户保存后只能在本页只读查看摘要级接单评估记录。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialForm}${latestRecordPanel}${savedRecordsPanel}${statusBoundaryPanel}${realDataTrialResultPanel()}${orderEvaluationBoundaryNotesPanel()}${amountCostPlaceholder}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE</span><h3>试算条件与数据来源</h3></div><span class="version">${futureInputs.length} 类资料</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>当前阶段不读取临时导入文件，不写入正式基础资料；手动输入的临时数据只存在于当前页面状态，刷新后不会作为正式资料存在。</p></div></article></div>`;
 }
 
 function warehouseFeedbackForRow(row, index) {
