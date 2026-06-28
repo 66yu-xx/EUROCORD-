@@ -27,7 +27,16 @@ const DEMO_DELIVERY_RISK_ORDER = {
 };
 const deliveryRiskInputState = getDemoDeliveryRiskDefaults();
 let deliveryRiskPreview = null;
-const realDataTrialInputState = { selectedProductId: '', plannedQty: '', requiredDate: '', asOfDate: formatDateInputValue(new Date()) };
+const REAL_DATA_TRIAL_SOURCE_SYSTEM = 'system';
+const REAL_DATA_TRIAL_SOURCE_TEMPORARY = 'temporary';
+const realDataTrialInputState = { source: REAL_DATA_TRIAL_SOURCE_SYSTEM, selectedProductId: '', plannedQty: '', requiredDate: '', asOfDate: formatDateInputValue(new Date()) };
+const temporaryTrialInputState = {
+  productName: '',
+  plannedQty: '',
+  requiredDate: '',
+  asOfDate: formatDateInputValue(new Date()),
+  materials: [createTemporaryTrialMaterialRow()],
+};
 let realDataTrialPreview = null;
 let realDataTrialError = '';
 const DELIVERY_RISK_LABELS = { ok: '可满足', warning: '交期紧张', critical: '交期高风险', unknown: '无法判断' };
@@ -76,6 +85,43 @@ function validateTrialDateInputs({ requiredDate, asOfDate, asOfLabel = '分析�
   return '';
 }
 
+function createTemporaryTrialMaterialRow() {
+  return { code: '', name: '', qtyPerProduct: '', stockQty: '', safetyStock: '', procurementLeadTimeDays: '' };
+}
+
+function toOptionalNonNegativeNumber(value, fallback = 0) {
+  if (value === '' || value === null || value === undefined) return fallback;
+  return Number(value);
+}
+
+function validateTemporaryTrialInputs() {
+  const productName = temporaryTrialInputState.productName.trim();
+  const plannedQty = Number(temporaryTrialInputState.plannedQty);
+  if (!productName) return '请输入临时产品名称';
+  if (!temporaryTrialInputState.plannedQty || !Number.isFinite(plannedQty) || plannedQty <= 0) return '请输入大于 0 的计划数量';
+  if (!temporaryTrialInputState.requiredDate) return '请选择期望交期';
+  if (!temporaryTrialInputState.asOfDate) return '请选择分析日期';
+  const dateError = validateTrialDateInputs({ requiredDate: temporaryTrialInputState.requiredDate, asOfDate: temporaryTrialInputState.asOfDate });
+  if (dateError) return dateError;
+  if (!temporaryTrialInputState.materials.length) return '至少需要一条临时物料行';
+
+  for (let index = 0; index < temporaryTrialInputState.materials.length; index += 1) {
+    const row = temporaryTrialInputState.materials[index];
+    const rowLabel = `第 ${index + 1} 行物料`;
+    const qtyPerProduct = Number(row.qtyPerProduct);
+    const stockQty = Number(row.stockQty);
+    const safetyStock = toOptionalNonNegativeNumber(row.safetyStock, 0);
+    const procurementLeadTimeDays = row.procurementLeadTimeDays === '' ? null : Number(row.procurementLeadTimeDays);
+    if (!row.name.trim()) return `${rowLabel}请输入物料名称`;
+    if (!row.qtyPerProduct || !Number.isFinite(qtyPerProduct) || qtyPerProduct <= 0) return `${rowLabel}单台用量必须大于 0`;
+    if (row.stockQty === '' || !Number.isFinite(stockQty) || stockQty < 0) return `${rowLabel}当前库存不能小于 0`;
+    if (!Number.isFinite(safetyStock) || safetyStock < 0) return `${rowLabel}安全库存不能小于 0`;
+    if (procurementLeadTimeDays !== null && (!Number.isFinite(procurementLeadTimeDays) || procurementLeadTimeDays < 0)) return `${rowLabel}采购周期天数不能小于 0`;
+  }
+
+  return '';
+}
+
 function buildTrialRowsFromExistingData({ product, plannedQty, requiredDate, asOfDate }) {
   const materials = materialService.listMaterials();
   const balances = inventoryService.listBalances();
@@ -91,6 +137,51 @@ function buildTrialRowsFromExistingData({ product, plannedQty, requiredDate, asO
       procurementLeadTimeDays: resolveProcurementLeadTimeDays(material, inventoryBalance),
     };
   }).filter((row) => row.material).map((row) => {
+    const risk = calculateProcurementRisk({
+      requiredQty: row.requiredQty,
+      stockQty: row.stockQty,
+      safetyStock: row.safetyStock,
+      procurementLeadTimeDays: row.procurementLeadTimeDays,
+      requiredDate,
+      asOfDate,
+    });
+    const resultRow = {
+      ...row,
+      shortageQty: risk.shortageQty,
+      remainingQty: risk.remainingQty,
+      riskLevel: risk.riskLevel,
+      quantityRisk: risk.quantityRisk,
+      mustOrderNow: risk.mustOrderNow,
+      latestOrderDate: risk.latestOrderDate,
+      expectedArrivalDate: risk.expectedArrivalDate,
+      deliveryRiskLabel: risk.shortageQty === 0 ? '可满足' : DELIVERY_RISK_LABELS[risk.riskLevel],
+      deliveryRiskReason: risk.shortageQty === 0 ? '库存可覆盖本次需求' : DELIVERY_RISK_REASONS[risk.riskLevel],
+    };
+    return { ...resultRow, recommendation: buildProcurementRecommendation(resultRow) };
+  });
+}
+
+function buildTemporaryTrialRows({ materialRows, plannedQty, requiredDate, asOfDate }) {
+  return materialRows.map((input, index) => {
+    const material = {
+      id: `temp-${index + 1}`,
+      code: input.code.trim() || `TEMP-${String(index + 1).padStart(2, '0')}`,
+      name: input.name.trim(),
+      unit: '件',
+    };
+    const qtyPerProduct = Number(input.qtyPerProduct);
+    const stockQty = Number(input.stockQty);
+    const safetyStock = toOptionalNonNegativeNumber(input.safetyStock, 0);
+    const procurementLeadTimeDays = input.procurementLeadTimeDays === '' ? null : Number(input.procurementLeadTimeDays);
+    return {
+      material,
+      qtyPerProduct,
+      requiredQty: qtyPerProduct * plannedQty,
+      stockQty,
+      safetyStock,
+      procurementLeadTimeDays,
+    };
+  }).map((row) => {
     const risk = calculateProcurementRisk({
       requiredQty: row.requiredQty,
       stockQty: row.stockQty,
@@ -446,8 +537,14 @@ function realDataTrialRoleFocusPanel(rows) {
 function realDataTrialResultPanel() {
   if (!realDataTrialPreview) return '';
 
-  const { product, plannedQty, requiredDate, asOfDate, rows } = realDataTrialPreview;
-  const summary = `<article class="panel" data-real-data-trial-result style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL RESULT</span><h3>一次性试算结果</h3></div><span class="version">${product.code} · 当前页面结果</span></div><div class="placeholder-form"><div><span>产品</span><strong>${product.code} · ${product.name} · ${product.model}</strong></div><div><span>试算数量</span><strong>${format(plannedQty)} 台</strong></div><div><span>期望交期</span><strong>${requiredDate}</strong></div><div><span>试算日期</span><strong>${asOfDate}</strong></div><div><span>数据来源</span><strong>系统现有产品 / BOM / 库存 / 采购周期</strong></div></div><div class="placeholder-copy"><p>本结果只保存在当前页面状态中，不保存正式订单，不保存订单评估记录，不占用或扣减库存，不生成采购单。</p></div></article>`;
+  const { product, plannedQty, requiredDate, asOfDate, rows, source = REAL_DATA_TRIAL_SOURCE_SYSTEM } = realDataTrialPreview;
+  const isTemporary = source === REAL_DATA_TRIAL_SOURCE_TEMPORARY;
+  const sourceLabel = isTemporary ? '手动输入的临时试算数据' : '系统现有产品 / BOM / 库存 / 采购周期';
+  const sourceNote = isTemporary
+    ? '当前结果基于手动输入的临时数据生成，仅用于一次性测试。不保存临时产品、临时物料、临时 BOM、临时库存或试算结果。'
+    : '本结果只保存在当前页面状态中，不保存正式订单，不保存订单评估记录，不占用或扣减库存，不生成采购单。';
+  const productLabel = isTemporary ? product.name : `${product.code} · ${product.name} · ${product.model}`;
+  const summary = `<article class="panel" data-real-data-trial-result style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL RESULT</span><h3>一次性试算结果</h3></div><span class="version">${product.code} · 当前页面结果</span></div><div class="placeholder-form"><div><span>产品</span><strong>${productLabel}</strong></div><div><span>试算数量</span><strong>${format(plannedQty)} 台</strong></div><div><span>期望交期</span><strong>${requiredDate}</strong></div><div><span>试算日期</span><strong>${asOfDate}</strong></div><div><span>数据来源</span><strong>${sourceLabel}</strong></div></div><div class="placeholder-copy"><p>${sourceNote}</p></div></article>`;
   if (!rows.length) return `<div data-real-data-trial-results>${summary}<article class="panel" style="margin-bottom:18px"><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成试算结果</strong><p>请先确认系统现有产品 BOM 资料。本页面不会导入 BOM，也不会修改正式 BOM。</p></div></article></div>`;
 
   const shortageRows = rows.filter((row) => row.shortageQty > 0 || row.quantityRisk === 'low');
@@ -457,6 +554,27 @@ function realDataTrialResultPanel() {
   const recommendationTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">PROCUREMENT SUGGESTION</span><h3>采购建议</h3></div><span class="version">不生成采购单</span></div><div class="placeholder-copy"><p>采购建议只用于本次试算阅读，不保存建议，不生成采购单，不进入采购流程。</p></div>${tableScrollHint()}<div class="table-wrap" style="${LOCAL_TABLE_SCROLL_STYLE}"><table style="min-width:780px"><thead><tr><th>物料</th><th>建议动作</th><th>建议采购数量</th><th>优先级</th><th>原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.recommendation.action}</td><td><strong>${format(row.recommendation.recommendedQty)}</strong> ${row.material.unit}</td><td><span class="soft-tag">${row.recommendation.priority}</span></td><td>${row.recommendation.reason}</td></tr>`).join('')}</tbody></table></div></article>`;
   const warehousePoints = `<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE CHECK</span><h3>仓库确认点</h3></div><span class="version">${shortageRows.length} 项关注</span></div><div class="entry-grid">${realDataTrialWarehousePoints(rows).map((point) => `<div class="entry-card">${icon('warehouse', 22)}<span><strong>${point}</strong><small>仅提示人工确认，不修改库存台账。</small></span></div>`).join('')}</div></article>`;
   return `<div data-real-data-trial-results>${summary}${decisionLayer}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}</div>`;
+}
+
+function realDataTrialSourcePanel() {
+  const sources = [
+    [REAL_DATA_TRIAL_SOURCE_SYSTEM, '使用系统现有产品 / BOM / 库存', '读取系统现有资料做一次性试算，不导入、不修改基础数据。', 'layers'],
+    [REAL_DATA_TRIAL_SOURCE_TEMPORARY, '手动输入临时试算数据', '手动输入临时产品和物料，用于资料未维护完整时的一次性风险测试。', 'edit'],
+  ];
+
+  return `<article class="panel" data-real-data-trial-source style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE MODE</span><h3>试算数据来源</h3></div><span class="version">默认使用系统资料</span></div><div class="entry-grid">${sources.map(([value, title, copy, ico]) => `<button class="entry-card" type="button" data-action="set-real-data-trial-source" data-source="${value}" aria-pressed="${realDataTrialInputState.source === value}">${icon(ico, 22)}<span><strong>${realDataTrialInputState.source === value ? '当前：' : ''}${title}</strong><small>${copy}</small></span></button>`).join('')}</div><div class="placeholder-copy"><p>两种模式都只在当前页面生成一次性试算结果，不保存正式资料、不占用库存、不生成采购单。</p></div></article>`;
+}
+
+function realDataTrialSystemForm(productOptions) {
+  return `<article class="panel" data-real-data-trial-form style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">REAL DATA TRIAL</span><h3>一次性试算条件</h3></div><span class="version">使用系统现有资料</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-real-data-trial-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>试算数量</span><input name="plannedQty" type="number" min="1" step="1" placeholder="请输入数量" value="${realDataTrialInputState.plannedQty}" data-real-data-trial-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${realDataTrialInputState.requiredDate}" data-real-data-trial-input /></label><label class="field"><span>试算日期</span><input name="asOfDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${realDataTrialInputState.asOfDate}" data-real-data-trial-input /></label></div>${realDataTrialError ? `<div class="placeholder-copy" data-real-data-trial-error><p class="danger-text">${realDataTrialError}</p></div>` : ''}<div class="placeholder-copy"><p>本区只使用系统现有产品、BOM、库存和采购周期做当前页面一次性试算；不支持手动新增产品，不导入 BOM、库存或价格。</p></div><div class="modal-actions"><button class="primary" type="button" data-action="run-real-data-trial">${icon('chart', 17)} 开始试算</button></div></article>`;
+}
+
+function temporaryTrialMaterialRowsForm() {
+  return temporaryTrialInputState.materials.map((row, index) => `<article class="panel" data-temp-material-row="${index}" style="margin-bottom:12px;max-width:100%"><div class="panel-head"><div><span class="kicker">TEMP MATERIAL ${String(index + 1).padStart(2, '0')}</span><h3>临时物料行</h3></div><button class="secondary" type="button" data-action="remove-temp-trial-material" data-index="${index}">删除</button></div><div class="modal-body"><label class="field"><span>物料编码（可选）</span><input name="code" value="${row.code}" placeholder="例如 TEMP-MAT-01" data-temp-material-input data-index="${index}" /></label><label class="field"><span>物料名称</span><input name="name" value="${row.name}" placeholder="请输入物料名称" data-temp-material-input data-index="${index}" /></label><label class="field"><span>单台用量</span><input name="qtyPerProduct" type="number" min="0.0001" step="0.0001" value="${row.qtyPerProduct}" placeholder="必须大于 0" data-temp-material-input data-index="${index}" /></label><label class="field"><span>当前库存</span><input name="stockQty" type="number" min="0" step="0.0001" value="${row.stockQty}" placeholder="不能小于 0" data-temp-material-input data-index="${index}" /></label><label class="field"><span>安全库存（可选）</span><input name="safetyStock" type="number" min="0" step="0.0001" value="${row.safetyStock}" placeholder="默认 0" data-temp-material-input data-index="${index}" /></label><label class="field"><span>采购周期天数（可选）</span><input name="procurementLeadTimeDays" type="number" min="0" step="1" value="${row.procurementLeadTimeDays}" placeholder="为空表示待确认" data-temp-material-input data-index="${index}" /></label></div></article>`).join('');
+}
+
+function realDataTrialTemporaryForm() {
+  return `<article class="panel" data-temp-trial-form style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TEMPORARY TRIAL</span><h3>临时产品信息</h3></div><span class="version">仅当前页面一次性测试</span></div><div class="modal-body"><label class="field"><span>临时产品名称</span><input name="productName" value="${temporaryTrialInputState.productName}" placeholder="请输入临时产品名称" data-temp-trial-input /></label><label class="field"><span>计划数量</span><input name="plannedQty" type="number" min="1" step="1" value="${temporaryTrialInputState.plannedQty}" placeholder="必须大于 0" data-temp-trial-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${temporaryTrialInputState.requiredDate}" data-temp-trial-input /></label><label class="field"><span>分析日期</span><input name="asOfDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${temporaryTrialInputState.asOfDate}" data-temp-trial-input /></label></div>${realDataTrialError ? `<div class="placeholder-copy" data-real-data-trial-error><p class="danger-text">${realDataTrialError}</p></div>` : ''}<div class="placeholder-copy"><p>当前结果基于手动输入的临时数据生成，仅用于一次性测试；不会保存为正式产品、正式物料、正式 BOM、正式库存或正式订单。</p></div></article><article class="panel" data-temp-trial-materials style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">TEMP MATERIALS</span><h3>临时物料行</h3></div><button class="secondary" type="button" data-action="add-temp-trial-material">${icon('plus', 16)} 添加物料行</button></div><div class="placeholder-copy"><p>至少保留一行物料输入。采购周期为空时表示待确认，不会生成采购需求或采购单。</p></div>${temporaryTrialMaterialRowsForm()}<div class="modal-actions"><button class="primary" type="button" data-action="run-real-data-trial">${icon('chart', 17)} 开始临时试算</button></div></article>`;
 }
 
 function realDataTrialPage() {
@@ -471,16 +589,17 @@ function realDataTrialPage() {
   ];
   const boundaryItems = [
     ['不保存正式订单', '当前不会创建、保存或编辑真实客户订单，也不会保存订单评估记录。', 'grid'],
+    ['不保存临时资料', '手动输入的临时产品、物料、BOM 和库存只用于当前页面试算，刷新后不会作为正式资料存在。', 'edit'],
     ['不影响库存', '当前不会占用、扣减、锁定或修改任何库存。', 'warehouse'],
-    ['不生成采购单', '当前不会生成采购申请、采购单或付款申请。', 'cart'],
+    ['不生成采购需求', '当前不会生成采购需求、采购申请、采购单或付款申请。', 'cart'],
     ['不进入财务', '当前不会进入应付账款、财务凭证或正式财务模块。', 'chart'],
     ['不做正式成本核算', '当前不会形成正式成本结果，也不会计算利润或毛利。', 'box'],
     ['不导入新数据', '当前只读取系统现有产品、BOM、库存和采购周期，不导入 BOM、库存或价格。', 'layers'],
   ];
   const amountCostPlaceholder = `<article class="panel" data-real-data-trial-amount-cost style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">AMOUNT / COST</span><h3>金额与成本参考</h3></div><span class="version">占位状态 · 不进财务</span></div><div class="placeholder-form"><div><span>参考单价</span><strong>待维护</strong></div><div><span>建议采购数量</span><strong>待试算 / 由后续阶段接入</strong></div><div><span>采购金额参考</span><strong>待试算</strong></div><div><span>成本影响参考</span><strong>待确认</strong></div><div><span>价格状态</span><strong>未维护 / 待确认</strong></div></div><div class="placeholder-copy"><p>当前没有接入价格数据，不计算采购金额，不形成正式成本，不进入财务。</p></div></article>`;
-  const trialForm = `<article class="panel" data-real-data-trial-form style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">REAL DATA TRIAL</span><h3>一次性试算条件</h3></div><span class="version">使用系统现有资料</span></div><div class="modal-body"><label class="field"><span>产品</span><select name="selectedProductId" data-real-data-trial-input><option value="">请选择产品</option>${productOptions}</select></label><label class="field"><span>试算数量</span><input name="plannedQty" type="number" min="1" step="1" placeholder="请输入数量" value="${realDataTrialInputState.plannedQty}" data-real-data-trial-input /></label><label class="field"><span>期望交期</span><input name="requiredDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${realDataTrialInputState.requiredDate}" data-real-data-trial-input /></label><label class="field"><span>试算日期</span><input name="asOfDate" type="date" min="${TRIAL_DATE_MIN}" max="${TRIAL_DATE_MAX}" value="${realDataTrialInputState.asOfDate}" data-real-data-trial-input /></label></div>${realDataTrialError ? `<div class="placeholder-copy" data-real-data-trial-error><p class="danger-text">${realDataTrialError}</p></div>` : ''}<div class="placeholder-copy"><p>本区只使用系统现有产品、BOM、库存和采购周期做当前页面一次性试算；不支持手动新增产品，不导入 BOM、库存或价格。</p></div><div class="modal-actions"><button class="primary" type="button" data-action="run-real-data-trial">${icon('chart', 17)} 开始试算</button></div></article>`;
+  const trialForm = realDataTrialInputState.source === REAL_DATA_TRIAL_SOURCE_TEMPORARY ? realDataTrialTemporaryForm() : realDataTrialSystemForm(productOptions);
 
-  return `${skeletonNotice('真实数据试算', '这里用于基于系统现有产品、BOM、库存和采购周期做一次性试算，帮助判断缺料、交期、采购建议和仓库确认点。当前不导入新数据，不保存订单，不修改库存，不生成采购单，不进入财务。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 6</span><h3>真实数据试算入口</h3></div><span class="version">最小闭环 · 当前页面试算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：先选择系统现有产品，输入试算数量、期望交期和试算日期，再读取系统现有 BOM、库存和采购周期生成一次性试算结果。</p><p>本步骤不是正式订单模块，不保存正式订单或订单评估记录，不占用或扣减库存，不生成采购单，也不进入财务。</p></div></article><article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>当前试算链路</h3><div class="workflow-steps"><span>系统现有产品</span><b>+</b><span>BOM</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>仓库确认点</span></div><p>链路只在当前页面运行，不保存、不占用、不扣减、不生成、不进入财务。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">不保存 · 不占用 · 不生成 · 不进财务</span></div><div class="placeholder-copy"><p>当前试算不会保存正式订单，不保存订单评估记录，不占用库存，不扣减库存，不生成采购单，不生成付款申请，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialForm}${realDataTrialResultPanel()}${amountCostPlaceholder}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE</span><h3>试算条件与数据来源</h3></div><span class="version">${futureInputs.length} 类资料</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>当前阶段不读取临时导入文件，不写入正式基础资料；如需导入 BOM、库存或价格，应进入后续阶段单独设计。</p></div></article></div>`;
+  return `${skeletonNotice('真实数据试算', '这里用于基于系统现有产品、BOM、库存和采购周期做一次性试算，或手动输入临时产品与物料数据做一次性风险测试。当前不导入新数据，不保存订单，不修改库存，不生成采购单，不进入财务。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 8</span><h3>真实数据试算入口</h3></div><span class="version">系统资料 / 临时录入 · 当前页面试算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：可读取系统现有 BOM、库存和采购周期，也可在资料未完整维护时手动输入临时试算数据。</p><p>本步骤不是正式订单模块，不保存正式订单或订单评估记录，不保存临时产品、临时物料、临时 BOM 或临时库存，不占用或扣减库存，不生成采购单，也不进入财务。</p></div></article>${realDataTrialSourcePanel()}<article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>当前试算链路</h3><div class="workflow-steps"><span>系统现有资料或临时录入</span><b>+</b><span>BOM / 用量</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>仓库确认点</span></div><p>链路只在当前页面运行，不保存、不占用、不扣减、不生成、不进入财务。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">不保存 · 不占用 · 不生成 · 不进财务</span></div><div class="placeholder-copy"><p>当前试算不会保存正式订单，不保存订单评估记录，不保存临时资料，不占用库存，不扣减库存，不生成采购单，不生成采购需求，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialForm}${realDataTrialResultPanel()}${amountCostPlaceholder}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE</span><h3>试算条件与数据来源</h3></div><span class="version">${futureInputs.length} 类资料</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>当前阶段不读取临时导入文件，不写入正式基础资料；手动输入的临时数据只存在于当前页面状态，刷新后不会作为正式资料存在。</p></div></article></div>`;
 }
 
 function warehouseFeedbackForRow(row, index) {
@@ -890,6 +1009,21 @@ function bindEvents() {
     document.querySelector('[data-real-data-trial-error]')?.remove();
     document.querySelector('[data-real-data-trial-results]')?.remove();
   }));
+  document.querySelectorAll('[data-temp-trial-input]').forEach((input) => input.addEventListener('input', () => {
+    temporaryTrialInputState[input.name] = input.value;
+    realDataTrialError = '';
+    realDataTrialPreview = null;
+    document.querySelector('[data-real-data-trial-error]')?.remove();
+    document.querySelector('[data-real-data-trial-results]')?.remove();
+  }));
+  document.querySelectorAll('[data-temp-material-input]').forEach((input) => input.addEventListener('input', () => {
+    const row = temporaryTrialInputState.materials[Number(input.dataset.index)];
+    if (row) row[input.name] = input.value;
+    realDataTrialError = '';
+    realDataTrialPreview = null;
+    document.querySelector('[data-real-data-trial-error]')?.remove();
+    document.querySelector('[data-real-data-trial-results]')?.remove();
+  }));
   document.querySelectorAll('[data-order]').forEach((input) => input.addEventListener('input', () => updateOrder(input.dataset.order, input.value)));
   document.querySelectorAll('[data-step]').forEach((btn) => btn.addEventListener('click', () => { const input = document.querySelector(`[data-order="${btn.dataset.id}"]`); input.value = Math.max(0, Number(input.value) + Number(btn.dataset.step)); updateOrder(btn.dataset.id, input.value); }));
   document.querySelectorAll('[data-action]').forEach((el) => el.addEventListener('click', () => handleAction(el.dataset.action, el.dataset)));
@@ -911,6 +1045,28 @@ function handleAction(action, dataset) {
     return navigate('order-evaluation-detail');
   }
   if (action === 'back-order-evaluations') return navigate('order-evaluations');
+  if (action === 'set-real-data-trial-source') {
+    realDataTrialInputState.source = dataset.source === REAL_DATA_TRIAL_SOURCE_TEMPORARY ? REAL_DATA_TRIAL_SOURCE_TEMPORARY : REAL_DATA_TRIAL_SOURCE_SYSTEM;
+    realDataTrialError = '';
+    realDataTrialPreview = null;
+    render();
+    return;
+  }
+  if (action === 'add-temp-trial-material') {
+    temporaryTrialInputState.materials.push(createTemporaryTrialMaterialRow());
+    realDataTrialError = '';
+    realDataTrialPreview = null;
+    render();
+    return;
+  }
+  if (action === 'remove-temp-trial-material') {
+    if (temporaryTrialInputState.materials.length <= 1) return toast('至少保留一行物料输入');
+    temporaryTrialInputState.materials.splice(Number(dataset.index), 1);
+    realDataTrialError = '';
+    realDataTrialPreview = null;
+    render();
+    return;
+  }
   if (action === 'delivery-risk-placeholder') {
     const product = productService.listProducts().find((item) => item.id === deliveryRiskInputState.selectedProductId);
     if (!product) return toast('请选择产品');
@@ -926,6 +1082,40 @@ function handleAction(action, dataset) {
     return toast(rows.length ? '交期风险等级预览已生成' : '当前产品尚未维护 BOM，无法生成需求预览');
   }
   if (action === 'run-real-data-trial') {
+    if (realDataTrialInputState.source === REAL_DATA_TRIAL_SOURCE_TEMPORARY) {
+      document.querySelectorAll('[data-temp-trial-input]').forEach((input) => {
+        temporaryTrialInputState[input.name] = input.value;
+      });
+      document.querySelectorAll('[data-temp-material-input]').forEach((input) => {
+        const row = temporaryTrialInputState.materials[Number(input.dataset.index)];
+        if (row) row[input.name] = input.value;
+      });
+      const validationError = validateTemporaryTrialInputs();
+      if (validationError) {
+        realDataTrialError = validationError;
+        realDataTrialPreview = null;
+      } else {
+        const plannedQty = Number(temporaryTrialInputState.plannedQty);
+        const rows = buildTemporaryTrialRows({
+          materialRows: temporaryTrialInputState.materials,
+          plannedQty,
+          requiredDate: temporaryTrialInputState.requiredDate,
+          asOfDate: temporaryTrialInputState.asOfDate,
+        });
+        realDataTrialError = '';
+        realDataTrialPreview = {
+          source: REAL_DATA_TRIAL_SOURCE_TEMPORARY,
+          product: { code: 'TEMP', name: temporaryTrialInputState.productName.trim(), model: '手动临时试算' },
+          plannedQty,
+          requiredDate: temporaryTrialInputState.requiredDate,
+          asOfDate: temporaryTrialInputState.asOfDate,
+          rows,
+        };
+      }
+      render();
+      return;
+    }
+
     document.querySelectorAll('[data-real-data-trial-input]').forEach((input) => {
       realDataTrialInputState[input.name] = input.value;
     });
@@ -940,7 +1130,7 @@ function handleAction(action, dataset) {
       const plannedQty = Number(realDataTrialInputState.plannedQty);
       const rows = buildTrialRowsFromExistingData({ product, plannedQty, requiredDate: realDataTrialInputState.requiredDate, asOfDate: realDataTrialInputState.asOfDate });
       realDataTrialError = '';
-      realDataTrialPreview = { product, plannedQty, requiredDate: realDataTrialInputState.requiredDate, asOfDate: realDataTrialInputState.asOfDate, rows };
+      realDataTrialPreview = { source: REAL_DATA_TRIAL_SOURCE_SYSTEM, product, plannedQty, requiredDate: realDataTrialInputState.requiredDate, asOfDate: realDataTrialInputState.asOfDate, rows };
     }
     render();
     return;
