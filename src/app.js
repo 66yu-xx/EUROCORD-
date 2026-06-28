@@ -48,6 +48,8 @@ const DELIVERY_RISK_REASONS = {
 };
 const TRIAL_DATE_MIN = '2000-01-01';
 const TRIAL_DATE_MAX = '2100-12-31';
+const TRIAL_EVALUATION_RECORDS_KEY = 'lufuta.trialEvaluationRecords.v1';
+let latestTrialEvaluationRecord = readTrialEvaluationRecords()[0] || null;
 
 function formatDateInputValue(date) {
   const year = date.getFullYear();
@@ -234,7 +236,7 @@ function buildTemporaryTrialRows({ materialRows, plannedQty, requiredDate, asOfD
 
 const pages = [
   ['dashboard', '首页', 'grid'], ['delivery-risk', '交期风险分析', 'chart'], ['warehouse-alerts', '库存预警反馈', 'warehouse'],
-  ['order-evaluations', '订单评估记录', 'chart'],
+  ['order-evaluations', '接单评估记录', 'chart'],
   ['real-data-trial', '真实数据试算', 'layers'],
   ['materials', '物料资料', 'layers'], ['product-bom', '产品 / BOM', 'git'], ['inventory', '库存台账', 'warehouse'],
   ['audit', '待审核流水', 'chart'], ['inbound', '入库占位', 'box'], ['outbound', '领料占位', 'cart'], ['supplier-return', '退货占位', 'warehouse'],
@@ -291,7 +293,7 @@ const PAGE_OVERFLOW_GUARD_STYLE = `<style id="page-overflow-guard">
 </style>`;
 
 function appShell(content) {
-  const active = pages.find((p) => p[0] === currentPage) || ['order-evaluation-detail', '订单评估记录详情', 'chart'];
+  const active = pages.find((p) => p[0] === currentPage) || ['order-evaluation-detail', '接单评估记录详情', 'chart'];
   return `${PAGE_OVERFLOW_GUARD_STYLE}<div class="shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">L</div><div><strong>LUFUTA LITE</strong><small>物料管理系统</small></div></div>
@@ -440,8 +442,8 @@ function orderEvaluationRecordById(id) {
 function orderEvaluationsPage() {
   const records = data.orderEvaluationRecords || [];
   const rows = records.map((record) => `<tr><td><strong class="code">${record.id || '待编号'}</strong></td><td>${orderEvaluationProductLabel(record.input?.productId)}</td><td><strong>${format(record.input?.plannedQty || 0)}</strong> 台</td><td>${record.input?.requiredDate || '待确认'}</td><td>${record.input?.asOfDate || '待确认'}</td><td><span class="soft-tag">${orderEvaluationRiskLabel(record.summary?.riskLevel)}</span></td><td>${format(record.summary?.keyRiskMaterialCount || 0)}</td><td>${format(record.summary?.procurementConfirmCount || 0)}</td><td>${format(record.summary?.warehouseConfirmCount || 0)}</td><td><span class="soft-tag">${orderEvaluationStatusLabel(record.status)}</span></td><td><button class="secondary" type="button" data-action="view-order-evaluation" data-id="${record.id}">查看评估记录</button></td></tr>`);
-  const body = rows.length ? rows.join('') : '<tr><td colspan="11"><div class="empty-table"><strong>暂无评估记录</strong><p>当前没有静态订单评估记录；本页仍然只读，不提供新增、编辑或删除。</p></div></td></tr>';
-  return `${skeletonNotice('订单评估记录', '当前页面展示的是订单评估记录原型数据，用于回看一次交期风险分析。它不是正式销售订单，不占用库存，不生成采购单，也不进入财务。')}<article class="panel table-panel" data-order-evaluations-page><div class="panel-head"><div><span class="kicker">ORDER EVALUATION RECORDS</span><h3>订单评估记录</h3></div><span class="version">${records.length} 条 · 演示记录</span></div><div class="placeholder-copy"><p>当前记录为内置演示评估记录，用于展示未来订单评估归档效果。重置数据不会删除这些演示记录。</p><p>这些记录来自静态演示数据，只用于说明“订单场景评估”如何被回看；页面不提供新增、编辑、删除、重新分析或真实业务操作，也不会改变库存、采购、财务或审批状态。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>评估编号</th><th>产品</th><th>数量</th><th>期望交期</th><th>分析日期</th><th>风险等级</th><th>关键风险物料</th><th>需采购确认</th><th>需仓库确认</th><th>状态</th><th>只读回看</th></tr></thead><tbody>${body}</tbody></table></div></article>`;
+  const body = rows.length ? rows.join('') : '<tr><td colspan="11"><div class="empty-table"><strong>暂无评估记录</strong><p>当前没有静态接单评估记录；本页仍然只读，不提供新增、编辑或删除。</p></div></td></tr>';
+  return `${skeletonNotice('接单评估记录', '当前页面展示的是接单评估记录原型数据，用于回看一次交期风险分析。它不是正式订单，不占用库存，不生成采购单，也不进入财务。')}<article class="panel table-panel" data-order-evaluations-page><div class="panel-head"><div><span class="kicker">ORDER EVALUATION RECORDS</span><h3>接单评估记录</h3></div><span class="version">${records.length} 条 · 演示记录</span></div><div class="placeholder-copy"><p>当前记录为内置演示评估记录，用于展示未来接单评估归档效果。重置数据不会删除这些演示记录。</p><p>这些记录来自静态演示数据，只用于说明“接单前评估”如何被回看；页面不提供新增、编辑、删除、重新分析或真实业务操作，也不会改变库存、采购、财务或审批状态。</p></div>${tableScrollHint()}<div class="table-wrap"><table><thead><tr><th>评估编号</th><th>产品</th><th>数量</th><th>期望交期</th><th>分析日期</th><th>风险等级</th><th>关键风险物料</th><th>需采购确认</th><th>需仓库确认</th><th>状态</th><th>只读回看</th></tr></thead><tbody>${body}</tbody></table></div></article>`;
 }
 
 function snapshotEmptyText(items, label) {
@@ -451,7 +453,7 @@ function snapshotEmptyText(items, label) {
 function orderEvaluationDetailPage() {
   const record = orderEvaluationRecordById(selectedOrderEvaluationId);
   if (!record) {
-    return `${skeletonNotice('订单评估记录详情', '当前没有可回看的订单评估记录。')}<article class="panel"><div class="empty-table"><strong>未找到评估记录</strong><p>请返回订单评估记录列表查看当前静态演示数据。</p><button class="secondary" data-action="back-order-evaluations">返回订单评估记录列表</button></div></article>`;
+    return `${skeletonNotice('接单评估记录详情', '当前没有可回看的接单评估记录。')}<article class="panel"><div class="empty-table"><strong>未找到评估记录</strong><p>请返回接单评估记录列表查看当前静态演示数据。</p><button class="secondary" data-action="back-order-evaluations">返回接单评估记录列表</button></div></article>`;
   }
 
   const productLabel = orderEvaluationProductLabel(record.input?.productId);
@@ -464,9 +466,9 @@ function orderEvaluationDetailPage() {
     ['不进入财务', record.businessBoundary?.entersFinance === false ? '是' : '待确认'],
     ['不包含成本核算', record.businessBoundary?.hasCostAccounting === false ? '是' : '待确认'],
   ];
-  const backToListButton = '<div data-order-evaluation-backline style="margin-bottom:14px"><button class="secondary" type="button" data-action="back-order-evaluations">← 返回订单评估记录列表</button></div>';
+  const backToListButton = '<div data-order-evaluation-backline style="margin-bottom:14px"><button class="secondary" type="button" data-action="back-order-evaluations">← 返回接单评估记录列表</button></div>';
 
-  return `${backToListButton}${skeletonNotice('订单评估记录详情', '当前页面用于回看一次订单评估记录，不代表正式接单。该记录不会占用库存，不会生成采购单，不会进入财务核算。')}<article class="panel" data-order-evaluation-detail style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ORDER EVALUATION DETAIL</span><h3>${record.id || '待编号'}</h3></div><button class="secondary" data-action="back-order-evaluations">返回订单评估记录列表</button></div><div class="placeholder-form"><div><span>评估编号</span><strong>${record.id || '待编号'}</strong></div><div><span>状态</span><strong>${orderEvaluationStatusLabel(record.status)}</strong></div><div><span>产品</span><strong>${productLabel}</strong></div><div><span>数量</span><strong>${format(record.input?.plannedQty || 0)} 台</strong></div><div><span>期望交期</span><strong>${record.input?.requiredDate || '待确认'}</strong></div><div><span>分析日期</span><strong>${record.input?.asOfDate || '待确认'}</strong></div><div><span>创建时间</span><strong>${record.createdAt || '待确认'}</strong></div><div><span>更新时间</span><strong>${record.updatedAt || '待确认'}</strong></div><div><span>备注</span><strong>${record.input?.note || '暂无备注'}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">SUMMARY</span><h3>分析摘要</h3></div><span class="version">只读快照</span></div><div class="placeholder-form"><div><span>风险等级</span><strong>${orderEvaluationRiskLabel(record.summary?.riskLevel)}</strong></div><div><span>是否可满足交期</span><strong>${record.summary?.canMeetRequiredDate ? '可以满足' : '暂不建议直接承诺'}</strong></div><div><span>关键风险物料数量</span><strong>${format(record.summary?.keyRiskMaterialCount || 0)}</strong></div><div><span>需采购确认数量</span><strong>${format(record.summary?.procurementConfirmCount || 0)}</strong></div><div><span>需仓库确认数量</span><strong>${format(record.summary?.warehouseConfirmCount || 0)}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ANALYSIS SNAPSHOT</span><h3>分析快照</h3></div><span class="version">${snapshot.source || '未知来源'}</span></div><div class="placeholder-form"><div><span>快照生成时间</span><strong>${snapshot.generatedAt || '待确认'}</strong></div><div><span>来源</span><strong>${snapshot.source || '待确认'}</strong></div><div><span>物料风险明细</span><strong>${snapshotEmptyText(snapshot.materialRisks, '物料风险明细')}</strong></div><div><span>采购建议快照</span><strong>${snapshotEmptyText(snapshot.procurementRecommendations, '采购建议')}</strong></div><div><span>仓库反馈提示</span><strong>${snapshotEmptyText(snapshot.warehouseFeedbackHints, '仓库反馈提示')}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BUSINESS BOUNDARY</span><h3>业务边界</h3></div><span class="version">演示记录 · 不触发业务联动</span></div><div class="entry-grid">${boundaryCards.map(([title, value]) => `<div class="entry-card">${icon('grid', 22)}<span><strong>${title}</strong><small>${value}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>本记录为演示评估记录，不是用户真实保存的订单评估。</p><p>本详情页只用于回看静态评估记录，不提供保存、编辑、删除、重新分析或真实业务操作。</p></div></article>`;
+  return `${backToListButton}${skeletonNotice('接单评估记录详情', '当前页面用于回看一次接单评估记录，不代表正式接单。该记录不会占用库存，不会生成采购单，不会进入财务核算。')}<article class="panel" data-order-evaluation-detail style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ORDER EVALUATION DETAIL</span><h3>${record.id || '待编号'}</h3></div><button class="secondary" data-action="back-order-evaluations">返回接单评估记录列表</button></div><div class="placeholder-form"><div><span>评估编号</span><strong>${record.id || '待编号'}</strong></div><div><span>状态</span><strong>${orderEvaluationStatusLabel(record.status)}</strong></div><div><span>产品</span><strong>${productLabel}</strong></div><div><span>数量</span><strong>${format(record.input?.plannedQty || 0)} 台</strong></div><div><span>期望交期</span><strong>${record.input?.requiredDate || '待确认'}</strong></div><div><span>分析日期</span><strong>${record.input?.asOfDate || '待确认'}</strong></div><div><span>创建时间</span><strong>${record.createdAt || '待确认'}</strong></div><div><span>更新时间</span><strong>${record.updatedAt || '待确认'}</strong></div><div><span>备注</span><strong>${record.input?.note || '暂无备注'}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">SUMMARY</span><h3>分析摘要</h3></div><span class="version">只读快照</span></div><div class="placeholder-form"><div><span>风险等级</span><strong>${orderEvaluationRiskLabel(record.summary?.riskLevel)}</strong></div><div><span>是否可满足交期</span><strong>${record.summary?.canMeetRequiredDate ? '可以满足' : '暂不建议直接承诺'}</strong></div><div><span>关键风险物料数量</span><strong>${format(record.summary?.keyRiskMaterialCount || 0)}</strong></div><div><span>需采购确认数量</span><strong>${format(record.summary?.procurementConfirmCount || 0)}</strong></div><div><span>需仓库确认数量</span><strong>${format(record.summary?.warehouseConfirmCount || 0)}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">ANALYSIS SNAPSHOT</span><h3>分析快照</h3></div><span class="version">${snapshot.source || '未知来源'}</span></div><div class="placeholder-form"><div><span>快照生成时间</span><strong>${snapshot.generatedAt || '待确认'}</strong></div><div><span>来源</span><strong>${snapshot.source || '待确认'}</strong></div><div><span>物料风险明细</span><strong>${snapshotEmptyText(snapshot.materialRisks, '物料风险明细')}</strong></div><div><span>采购建议快照</span><strong>${snapshotEmptyText(snapshot.procurementRecommendations, '采购建议')}</strong></div><div><span>仓库反馈提示</span><strong>${snapshotEmptyText(snapshot.warehouseFeedbackHints, '仓库反馈提示')}</strong></div></div></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BUSINESS BOUNDARY</span><h3>业务边界</h3></div><span class="version">演示记录 · 不触发业务联动</span></div><div class="entry-grid">${boundaryCards.map(([title, value]) => `<div class="entry-card">${icon('grid', 22)}<span><strong>${title}</strong><small>${value}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>本记录为演示评估记录，不是用户真实保存的接单评估记录。</p><p>本详情页只用于回看静态评估记录，不提供保存、编辑、删除、重新分析或真实业务操作。</p></div></article>`;
 }
 
 function realDataTrialSafetyStatus(row) {
@@ -494,6 +496,20 @@ function realDataTrialRiskReasons(row) {
   return reasons;
 }
 
+function prioritizedRealDataTrialRiskItems(rows, limit = 5) {
+  return rows
+    .map((row) => ({ row, reasons: realDataTrialRiskReasons(row) }))
+    .filter((item) => item.reasons.length)
+    .sort((a, b) => {
+      const shortageDelta = Number(b.row.shortageQty > 0) - Number(a.row.shortageQty > 0);
+      if (shortageDelta) return shortageDelta;
+      const missingLeadTimeDelta = Number(b.row.procurementLeadTimeDays === null) - Number(a.row.procurementLeadTimeDays === null);
+      if (missingLeadTimeDelta) return missingLeadTimeDelta;
+      return Number(b.row.quantityRisk === 'low') - Number(a.row.quantityRisk === 'low');
+    })
+    .slice(0, limit);
+}
+
 function realDataTrialDecisionSummary(rows) {
   const total = rows.length;
   const covered = rows.filter((row) => row.shortageQty <= 0).length;
@@ -515,6 +531,99 @@ function realDataTrialDecisionSummary(rows) {
   return { total, covered, shortage, lowStock, missingLeadTime, longLeadTime, hasRisk, riskSources, conclusion };
 }
 
+function readTrialEvaluationRecords() {
+  // BOUNDARY_NOTICE: Step 11 uses only browser LocalStorage for the current front-end minimum loop.
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(TRIAL_EVALUATION_RECORDS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeTrialEvaluationRecords(records) {
+  // BOUNDARY_NOTICE: These records stay in the current browser and are not formal orders or formal master data.
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    localStorage.setItem(TRIAL_EVALUATION_RECORDS_KEY, JSON.stringify(records));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function trialEvaluationRecordId(date = new Date()) {
+  const stamp = date.toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+  return `EV-TRIAL-${stamp}-${String(date.getMilliseconds()).padStart(3, '0')}`;
+}
+
+function trialEvaluationSourceLabel(source) {
+  return source === REAL_DATA_TRIAL_SOURCE_TEMPORARY ? '临时输入' : '系统数据';
+}
+
+function formatRecordCreatedAt(value) {
+  if (!value) return '待确认';
+  return value.replace('T', ' ').slice(0, 19);
+}
+
+function createTrialEvaluationRecord(preview) {
+  const { product, plannedQty, requiredDate, asOfDate, rows, source = REAL_DATA_TRIAL_SOURCE_SYSTEM } = preview;
+  const now = new Date();
+  const summary = realDataTrialDecisionSummary(rows);
+  const keyRiskMaterials = prioritizedRealDataTrialRiskItems(rows, 5).map(({ row, reasons }) => ({
+    code: row.material.code,
+    name: row.material.name,
+    reasons,
+  }));
+
+  return {
+    id: trialEvaluationRecordId(now),
+    recordType: 'trialOrderEvaluation',
+    createdAt: now.toISOString(),
+    source,
+    sourceLabel: trialEvaluationSourceLabel(source),
+    productName: product.name,
+    productCode: product.code,
+    plannedQty,
+    requiredDate,
+    asOfDate,
+    conclusion: summary.conclusion,
+    materialTotalCount: summary.total,
+    shortageMaterialCount: summary.shortage,
+    lowStockMaterialCount: summary.lowStock,
+    missingLeadTimeMaterialCount: summary.missingLeadTime,
+    keyRiskMaterials,
+    status: '待确认',
+    note: '不代表正式订单，不影响库存，不生成采购单。',
+  };
+}
+
+function saveTrialEvaluationRecord() {
+  if (!realDataTrialPreview) return null;
+  const record = createTrialEvaluationRecord(realDataTrialPreview);
+  const records = readTrialEvaluationRecords();
+  const nextRecords = [record, ...records].slice(0, 20);
+  if (!writeTrialEvaluationRecords(nextRecords)) return null;
+  latestTrialEvaluationRecord = record;
+  return record;
+}
+
+function savedTrialEvaluationRecordPanel() {
+  if (!latestTrialEvaluationRecord) return '';
+  const record = latestTrialEvaluationRecord;
+  const keyRiskText = record.keyRiskMaterials?.length
+    ? record.keyRiskMaterials.map((item) => `${item.code} · ${item.name}：${item.reasons.join('、')}`).join('；')
+    : '暂无明显关键风险物料';
+
+  return `<article class="panel" data-latest-trial-evaluation-record style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">LATEST EVALUATION RECORD</span><h3>最近保存的评估记录摘要</h3></div><span class="version">${record.id}</span></div><div class="placeholder-form"><div><span>评估编号</span><strong>${record.id}</strong></div><div><span>创建时间</span><strong>${formatRecordCreatedAt(record.createdAt)}</strong></div><div><span>数据来源</span><strong>${record.sourceLabel}</strong></div><div><span>产品名称</span><strong>${record.productName}</strong></div><div><span>计划数量</span><strong>${format(record.plannedQty)} 台</strong></div><div><span>状态</span><strong>${record.status}</strong></div></div><div class="placeholder-copy"><p>${record.conclusion}</p><p>关键风险物料摘要：${keyRiskText}</p><p>${record.note} 当前记录保存在浏览器 LocalStorage 中，用于验证接单评估记录概念。</p></div></article>`;
+}
+
+function trialEvaluationSavePanel() {
+  // BOUNDARY_NOTICE / TRANSITION_COPY: LocalStorage is only the front-end minimum loop for Step 11; production needs backend, permissions, audit, and collaboration rules.
+  return `<article class="panel" data-trial-evaluation-save-panel style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">ORDER EVALUATION SAVE</span><h3>保存为接单评估记录</h3></div><span class="version">本地最小闭环</span></div><div class="placeholder-copy"><p>可将本次试算的输入条件和风险摘要保存为接单评估记录，用于接单前复查和内部沟通。</p><p>当前使用浏览器 LocalStorage 做前端本地最小闭环，用于验证评估记录概念。未来正式版本需要后端数据库、权限、审计和多人协作规则。</p><p>保存评估记录不代表正式订单，不影响库存，不生成采购单，不进入财务或成本。</p></div><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="primary" type="button" data-action="save-trial-evaluation-record">${icon('chart', 17)} 保存为评估记录</button></div></article>${savedTrialEvaluationRecordPanel()}`;
+}
+
 function realDataTrialDecisionSummaryPanel(rows) {
   const summary = realDataTrialDecisionSummary(rows);
   const sourceText = summary.riskSources.length ? summary.riskSources.join('、') : '暂无明显集中风险来源';
@@ -529,17 +638,7 @@ function realDataTrialDecisionSummaryPanel(rows) {
 }
 
 function realDataTrialKeyRiskPanel(rows) {
-  const riskRows = rows
-    .map((row) => ({ row, reasons: realDataTrialRiskReasons(row) }))
-    .filter((item) => item.reasons.length)
-    .sort((a, b) => {
-      const shortageDelta = Number(b.row.shortageQty > 0) - Number(a.row.shortageQty > 0);
-      if (shortageDelta) return shortageDelta;
-      const missingLeadTimeDelta = Number(b.row.procurementLeadTimeDays === null) - Number(a.row.procurementLeadTimeDays === null);
-      if (missingLeadTimeDelta) return missingLeadTimeDelta;
-      return Number(b.row.quantityRisk === 'low') - Number(a.row.quantityRisk === 'low');
-    })
-    .slice(0, 5);
+  const riskRows = prioritizedRealDataTrialRiskItems(rows, 5);
 
   const content = riskRows.length
     ? `<div class="entry-grid">${riskRows.map(({ row, reasons }) => `<div class="entry-card">${icon('warehouse', 22)}<span><strong>${row.material.code} · ${row.material.name}</strong><small>风险原因：${reasons.join('、')}。${row.shortageQty > 0 ? '建议优先确认缺口数量和到料时间，可能影响交期。' : row.procurementLeadTimeDays === null ? '需确认采购周期，并由仓库确认实际库存。' : '建议关注安全库存和实际可用数量。'}</small></span></div>`).join('')}</div>`
@@ -567,11 +666,12 @@ function realDataTrialResultPanel() {
   const isTemporary = source === REAL_DATA_TRIAL_SOURCE_TEMPORARY;
   const sourceLabel = isTemporary ? '手动输入的临时试算数据' : '系统现有产品 / BOM / 库存 / 采购周期';
   const sourceNote = isTemporary
-    ? '当前结果基于手动输入的临时数据生成，仅用于一次性测试。不保存临时产品、临时物料、临时 BOM、临时库存或试算结果。'
-    : '本结果只保存在当前页面状态中，不保存正式订单，不保存订单评估记录，不占用或扣减库存，不生成采购单。';
+    ? '当前结果基于手动输入的临时数据生成，仅用于一次性测试。不会保存临时产品、临时物料、临时 BOM 或临时库存；可由用户手动保存摘要级接单评估记录。'
+    : '本结果只保存在当前页面状态中，不保存正式订单；可由用户手动保存摘要级接单评估记录，不占用或扣减库存，不生成采购单。';
   const productLabel = isTemporary ? product.name : `${product.code} · ${product.name} · ${product.model}`;
   const summary = `<article class="panel" data-real-data-trial-result style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL RESULT</span><h3>一次性试算结果</h3></div><span class="version">${product.code} · 当前页面结果</span></div><div class="placeholder-form"><div><span>产品</span><strong>${productLabel}</strong></div><div><span>试算数量</span><strong>${format(plannedQty)} 台</strong></div><div><span>期望交期</span><strong>${requiredDate}</strong></div><div><span>试算日期</span><strong>${asOfDate}</strong></div><div><span>数据来源</span><strong>${sourceLabel}</strong></div></div><div class="placeholder-copy"><p>${sourceNote}</p></div></article>`;
-  if (!rows.length) return `<div data-real-data-trial-results>${summary}<article class="panel" style="margin-bottom:18px"><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成试算结果</strong><p>请先确认系统现有产品 BOM 资料。本页面不会导入 BOM，也不会修改正式 BOM。</p></div></article></div>`;
+  const savePanel = trialEvaluationSavePanel();
+  if (!rows.length) return `<div data-real-data-trial-results>${summary}${savePanel}<article class="panel" style="margin-bottom:18px"><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成试算结果</strong><p>请先确认系统现有产品 BOM 资料。本页面不会导入 BOM，也不会修改正式 BOM。</p></div></article></div>`;
 
   const shortageRows = rows.filter((row) => row.shortageQty > 0 || row.quantityRisk === 'low');
   const decisionLayer = `${realDataTrialDecisionSummaryPanel(rows)}${realDataTrialKeyRiskPanel(rows)}${realDataTrialRoleFocusPanel(rows)}`;
@@ -579,7 +679,7 @@ function realDataTrialResultPanel() {
   const riskTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">DELIVERY RISK</span><h3>交期风险</h3></div><span class="version">只读判断</span></div>${tableScrollHint()}<div class="table-wrap" style="${LOCAL_TABLE_SCROLL_STYLE}"><table style="min-width:860px"><thead><tr><th>物料</th><th>库存是否可覆盖</th><th>采购周期是否足够</th><th>预计到料时间</th><th>风险等级</th><th>风险原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.shortageQty > 0 ? '库存不足' : '库存可覆盖'}</td><td>${row.procurementLeadTimeDays === null ? '采购周期缺失，需人工确认' : row.riskLevel === 'critical' ? '预计不足' : '当前判断可参考'}</td><td>${row.expectedArrivalDate || (row.procurementLeadTimeDays === null ? '待确认' : '无需采购')}</td><td><span class="soft-tag">${row.deliveryRiskLabel}</span></td><td>${row.deliveryRiskReason}</td></tr>`).join('')}</tbody></table></div></article>`;
   const recommendationTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">PROCUREMENT SUGGESTION</span><h3>采购建议</h3></div><span class="version">不生成采购单</span></div><div class="placeholder-copy"><p>采购建议只用于本次试算阅读，不保存建议，不生成采购单，不进入采购流程。</p></div>${tableScrollHint()}<div class="table-wrap" style="${LOCAL_TABLE_SCROLL_STYLE}"><table style="min-width:780px"><thead><tr><th>物料</th><th>建议动作</th><th>建议采购数量</th><th>优先级</th><th>原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.recommendation.action}</td><td><strong>${format(row.recommendation.recommendedQty)}</strong> ${row.material.unit}</td><td><span class="soft-tag">${row.recommendation.priority}</span></td><td>${row.recommendation.reason}</td></tr>`).join('')}</tbody></table></div></article>`;
   const warehousePoints = `<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE CHECK</span><h3>仓库确认点</h3></div><span class="version">${shortageRows.length} 项关注</span></div><div class="entry-grid">${realDataTrialWarehousePoints(rows).map((point) => `<div class="entry-card">${icon('warehouse', 22)}<span><strong>${point}</strong><small>仅提示人工确认，不修改库存台账。</small></span></div>`).join('')}</div></article>`;
-  return `<div data-real-data-trial-results>${summary}${decisionLayer}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}</div>`;
+  return `<div data-real-data-trial-results>${summary}${savePanel}${decisionLayer}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}</div>`;
 }
 
 function realDataTrialSourcePanel() {
@@ -606,7 +706,7 @@ function realDataTrialTemporaryForm() {
 }
 
 function orderEvaluationBoundaryNotesPanel() {
-  // BOUNDARY_NOTICE / TRANSITION_COPY: Step 10 只说明未来接单评估记录边界，不保存记录、不导入文件、不触发业务动作。
+  // BOUNDARY_NOTICE / TRANSITION_COPY: 接单评估记录说明区保留阶段边界；Step 11 只允许保存摘要级本地记录，不触发正式业务动作。
   const recordFields = [
     '评估编号',
     '创建时间',
@@ -628,7 +728,7 @@ function orderEvaluationBoundaryNotesPanel() {
     ['业务文档来源', '客户 PO、邮件附件、工厂 BOM、盘点表、ERP 导出表、供应商报价表、采购周期表、历史订单、历史库存流水、PDF 或其他业务文档。', 'edit'],
   ];
 
-  return `<article class="panel" data-order-evaluation-boundary-notes style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">ORDER EVALUATION BOUNDARY</span><h3>接单评估记录说明</h3></div><span class="version">未来记录 · 当前不保存</span></div><div class="placeholder-copy"><p>接单评估记录用于保存某一次接单前试算的输入条件和风险结论，方便客户询单、接单前复查、内部沟通和转正式订单前判断。</p><p>它不代表正式订单，不影响库存，不生成采购单，不进入财务或成本。当前 Step 10 只是概念说明和边界准备，不保存接单评估记录，也不保存试算结果。</p></div><div class="entry-grid"><div class="entry-card">${icon('chart', 22)}<span><strong>可来自本次试算</strong><small>未来可承接系统数据试算或手动临时输入试算的输入条件与风险结论。</small></span></div><div class="entry-card">${icon('warehouse', 22)}<span><strong>只作为接单判断参考</strong><small>用于复查缺料、库存低、安全库存、采购周期和交期风险，不改变库存台账。</small></span></div><div class="entry-card">${icon('cart', 22)}<span><strong>不触发采购执行</strong><small>当前不生成采购需求或采购单，也不进入审批、供应商比价或付款流程。</small></span></div></div></article><article class="panel" data-order-evaluation-future-sources style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">FUTURE DATA SOURCES</span><h3>未来数据来源说明</h3></div><span class="version">仅预留边界 · 不执行导入</span></div><div class="placeholder-copy"><p>未来接单评估记录的数据来源不应限制为手动逐项输入，也可以来自 Excel、CSV、复制粘贴表格或客户 / 工厂提供的表格。当前阶段仅做边界说明，不提供导入按钮、不上传文件、不解析表格。</p><p>从全系统角度看，凡是涉及批量录入、历史迁移、客户或工厂提供资料的场景，都不应默认只能手动逐项输入，也应预留文件、表格或业务文档来源。本步骤不新增第三方库，不修改数据模型，不保存任何导入数据。</p></div><div class="entry-grid">${sourceCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article><article class="panel" data-order-evaluation-field-preview style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">FIELD PREVIEW</span><h3>未来记录字段预览</h3></div><span class="version">字段提示 · 非数据模型</span></div><div class="placeholder-copy"><p>以下只是未来接单评估记录可能需要的字段预览，便于后续设计保存边界和来源追溯；当前不会新增真实数据模型，不写入 LocalStorage，也不保存为正式资料。</p></div><div class="entry-grid">${recordFields.map((field) => `<div class="entry-card">${icon('grid', 22)}<span><strong>${field}</strong><small>未来记录字段提示，当前仅用于页面说明。</small></span></div>`).join('')}</div></article>`;
+  return `<article class="panel" data-order-evaluation-boundary-notes style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">ORDER EVALUATION BOUNDARY</span><h3>接单评估记录说明</h3></div><span class="version">摘要记录 · 当前本地保存</span></div><div class="placeholder-copy"><p>接单评估记录用于保存某一次接单前试算的输入条件和风险结论，方便客户询单、接单前复查、内部沟通和转正式订单前判断。</p><p>它不代表正式订单，不影响库存，不生成采购单，不进入财务或成本。当前 Step 11 只允许用户手动保存摘要级接单评估记录，用于验证最小闭环。</p></div><div class="entry-grid"><div class="entry-card">${icon('chart', 22)}<span><strong>可来自本次试算</strong><small>可承接系统数据试算或手动临时输入试算的输入条件与风险结论摘要。</small></span></div><div class="entry-card">${icon('warehouse', 22)}<span><strong>只作为接单判断参考</strong><small>用于复查缺料、库存低、安全库存、采购周期和交期风险，不改变库存台账。</small></span></div><div class="entry-card">${icon('cart', 22)}<span><strong>不触发采购执行</strong><small>当前不生成采购需求或采购单，也不进入审批、供应商比价或付款流程。</small></span></div></div></article><article class="panel" data-order-evaluation-future-sources style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">FUTURE DATA SOURCES</span><h3>未来数据来源说明</h3></div><span class="version">仅预留边界 · 不执行导入</span></div><div class="placeholder-copy"><p>未来接单评估记录的数据来源不应限制为手动逐项输入，也可以来自 Excel、CSV、复制粘贴表格或客户 / 工厂提供的表格。当前阶段仅做边界说明，不提供导入按钮、不上传文件、不解析表格。</p><p>从全系统角度看，凡是涉及批量录入、历史迁移、客户或工厂提供资料的场景，都不应默认只能手动逐项输入，也应预留文件、表格或业务文档来源。本步骤不新增第三方库，不修改数据模型，不保存任何导入数据。</p></div><div class="entry-grid">${sourceCards.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article><article class="panel" data-order-evaluation-field-preview style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">FIELD PREVIEW</span><h3>未来记录字段预览</h3></div><span class="version">字段提示 · 非正式数据模型</span></div><div class="placeholder-copy"><p>以下只是未来接单评估记录可能需要的字段预览，便于后续设计保存边界和来源追溯；当前 LocalStorage 记录只保存摘要字段，不新增正式数据模型，也不保存为正式资料。</p></div><div class="entry-grid">${recordFields.map((field) => `<div class="entry-card">${icon('grid', 22)}<span><strong>${field}</strong><small>未来记录字段提示，当前仅用于页面说明。</small></span></div>`).join('')}</div></article>`;
 }
 
 function realDataTrialPage() {
@@ -642,7 +742,7 @@ function realDataTrialPage() {
     ['参考价格', '仅用于采购金额参考和成本影响参考。', 'layers'],
   ];
   const boundaryItems = [
-    ['不保存正式订单', '当前不会创建、保存或编辑真实客户订单，也不会保存订单评估记录。', 'grid'],
+    ['不保存正式订单', '当前不会创建、保存或编辑正式订单；仅允许用户手动保存摘要级接单评估记录。', 'grid'],
     ['不保存临时资料', '手动输入的临时产品、物料、BOM 和库存只用于当前页面试算，刷新后不会作为正式资料存在。', 'edit'],
     ['不影响库存', '当前不会占用、扣减、锁定或修改任何库存。', 'warehouse'],
     ['不生成采购需求', '当前不会生成采购需求、采购申请、采购单或付款申请。', 'cart'],
@@ -652,8 +752,9 @@ function realDataTrialPage() {
   ];
   const amountCostPlaceholder = `<article class="panel" data-real-data-trial-amount-cost style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">AMOUNT / COST</span><h3>金额与成本参考</h3></div><span class="version">占位状态 · 不进财务</span></div><div class="placeholder-form"><div><span>参考单价</span><strong>待维护</strong></div><div><span>建议采购数量</span><strong>待试算 / 由后续阶段接入</strong></div><div><span>采购金额参考</span><strong>待试算</strong></div><div><span>成本影响参考</span><strong>待确认</strong></div><div><span>价格状态</span><strong>未维护 / 待确认</strong></div></div><div class="placeholder-copy"><p>当前没有接入价格数据，不计算采购金额，不形成正式成本，不进入财务。</p></div></article>`;
   const trialForm = realDataTrialInputState.source === REAL_DATA_TRIAL_SOURCE_TEMPORARY ? realDataTrialTemporaryForm() : realDataTrialSystemForm(productOptions);
+  const latestRecordPanel = realDataTrialPreview ? '' : savedTrialEvaluationRecordPanel();
 
-  return `${skeletonNotice('真实数据试算', '这里用于基于系统现有产品、BOM、库存和采购周期做一次性试算，或手动输入临时产品与物料数据做一次性风险测试。当前不导入新数据，不保存订单，不修改库存，不生成采购单，不进入财务。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 10</span><h3>真实数据试算入口</h3></div><span class="version">系统资料 / 临时录入 · 当前页面试算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：可读取系统现有 BOM、库存和采购周期，也可在资料未完整维护时手动输入临时试算数据。</p><p>本步骤不是正式订单模块，不保存正式订单或订单评估记录，不保存临时产品、临时物料、临时 BOM 或临时库存，不占用或扣减库存，不生成采购单，也不进入财务。</p></div></article>${realDataTrialSourcePanel()}<article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>当前试算链路</h3><div class="workflow-steps"><span>系统现有资料或临时录入</span><b>+</b><span>BOM / 用量</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>仓库确认点</span></div><p>链路只在当前页面运行，不保存、不占用、不扣减、不生成、不进入财务。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">不保存 · 不占用 · 不生成 · 不进财务</span></div><div class="placeholder-copy"><p>当前试算不会保存正式订单，不保存订单评估记录，不保存临时资料，不占用库存，不扣减库存，不生成采购单，不生成采购需求，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialForm}${realDataTrialResultPanel()}${orderEvaluationBoundaryNotesPanel()}${amountCostPlaceholder}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE</span><h3>试算条件与数据来源</h3></div><span class="version">${futureInputs.length} 类资料</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>当前阶段不读取临时导入文件，不写入正式基础资料；手动输入的临时数据只存在于当前页面状态，刷新后不会作为正式资料存在。</p></div></article></div>`;
+  return `${skeletonNotice('真实数据试算', '这里用于基于系统现有产品、BOM、库存和采购周期做一次性试算，或手动输入临时产品与物料数据做一次性风险测试。当前不导入新数据，不保存正式订单，不修改库存，不生成采购单，不进入财务。')}<div data-real-data-trial-page><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">PHASE 8-STEP 11</span><h3>真实数据试算入口</h3></div><span class="version">系统资料 / 临时录入 · 当前页面试算</span></div><div class="placeholder-copy"><p>本页面用于承接 Phase 8 的真实数据试算方向：可读取系统现有 BOM、库存和采购周期，也可在资料未完整维护时手动输入临时试算数据。</p><p>本步骤不是正式订单模块，仅支持把本次试算摘要保存为接单评估记录；不会保存临时产品、临时物料、临时 BOM 或临时库存，不占用或扣减库存，不生成采购单，也不进入财务。</p></div></article>${realDataTrialSourcePanel()}<article class="panel workflow-panel" style="margin-bottom:18px"><span class="kicker">TRIAL FLOW</span><h3>当前试算链路</h3><div class="workflow-steps"><span>系统现有资料或临时录入</span><b>+</b><span>BOM / 用量</span><b>+</b><span>库存</span><b>+</b><span>采购周期</span><b>→</b><span>缺料结果</span><b>+</b><span>交期风险</span><b>+</b><span>采购建议</span><b>+</b><span>仓库确认点</span></div><p>链路只在当前页面运行，保存评估记录也只保存摘要，不占用、不扣减、不生成、不进入财务。</p></article><article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">BOUNDARY</span><h3>当前阶段边界</h3></div><span class="version">摘要记录 · 不占用 · 不生成 · 不进财务</span></div><div class="placeholder-copy"><p>当前试算不会保存正式订单，不保存临时资料，不占用库存，不扣减库存，不生成采购单，不生成采购需求，不进入应付账款，不进入正式财务，不做正式成本核算，不计算正式利润或正式毛利，也不生成财务凭证。用户点击后只会保存摘要级接单评估记录。</p></div><div class="entry-grid">${boundaryItems.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>${trialForm}${latestRecordPanel}${realDataTrialResultPanel()}${orderEvaluationBoundaryNotesPanel()}${amountCostPlaceholder}<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">DATA SOURCE</span><h3>试算条件与数据来源</h3></div><span class="version">${futureInputs.length} 类资料</span></div><div class="entry-grid">${futureInputs.map(([title, copy, ico]) => `<div class="entry-card">${icon(ico, 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>当前阶段不读取临时导入文件，不写入正式基础资料；手动输入的临时数据只存在于当前页面状态，刷新后不会作为正式资料存在。</p></div></article></div>`;
 }
 
 function warehouseFeedbackForRow(row, index) {
@@ -1145,6 +1246,12 @@ function handleAction(action, dataset) {
     deliveryRiskPreview = { product, plannedQty, requiredDate: deliveryRiskInputState.requiredDate, asOfDate: deliveryRiskInputState.asOfDate, rows };
     render();
     return toast(rows.length ? '交期风险等级预览已生成' : '当前产品尚未维护 BOM，无法生成需求预览');
+  }
+  if (action === 'save-trial-evaluation-record') {
+    if (!realDataTrialPreview) return toast('请先完成一次试算');
+    if (!saveTrialEvaluationRecord()) return toast('浏览器本地保存不可用，请稍后再试');
+    render();
+    return toast('已保存为接单评估记录。该记录仅用于接单前复查，不代表正式订单，不影响库存，不生成采购单。');
   }
   if (action === 'run-real-data-trial') {
     if (realDataTrialInputState.source === REAL_DATA_TRIAL_SOURCE_TEMPORARY) {
