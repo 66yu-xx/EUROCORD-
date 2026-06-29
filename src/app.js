@@ -770,8 +770,9 @@ function realDataTrialResultPanel() {
   const sourceNote = isTemporary
     ? '当前结果基于手动输入的临时数据生成，仅用于一次性测试。不会保存临时产品、临时物料、临时 BOM 或临时库存；可由用户手动保存摘要级接单评估记录。'
     : '本结果只保存在当前页面状态中，不保存正式订单；可由用户手动保存摘要级接单评估记录，不影响或扣减库存，不创建采购单。';
+  const completionNote = '试算已完成，结果已生成。建议先看下方“下一步建议”和“试算结论摘要”。';
   const productLabel = isTemporary ? product.name : `${product.code} · ${product.name} · ${product.model}`;
-  const summary = `<article class="panel" data-real-data-trial-result style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL RESULT</span><h3>一次性试算结果</h3></div><span class="version">${product.code} · 当前页面结果</span></div><div class="placeholder-form"><div><span>产品</span><strong>${productLabel}</strong></div><div><span>试算数量</span><strong>${format(plannedQty)} 台</strong></div><div><span>期望交期</span><strong>${requiredDate}</strong></div><div><span>试算日期</span><strong>${asOfDate}</strong></div><div><span>数据来源</span><strong>${sourceLabel}</strong></div></div><div class="placeholder-copy"><p>${sourceNote}</p></div></article>`;
+  const summary = `<article class="panel" data-real-data-trial-result style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL RESULT</span><h3>一次性试算结果</h3></div><span class="version">${product.code} · 当前页面结果</span></div><div class="placeholder-form"><div><span>产品</span><strong>${productLabel}</strong></div><div><span>试算数量</span><strong>${format(plannedQty)} 台</strong></div><div><span>期望交期</span><strong>${requiredDate}</strong></div><div><span>试算日期</span><strong>${asOfDate}</strong></div><div><span>数据来源</span><strong>${sourceLabel}</strong></div></div><div class="placeholder-copy"><p><strong>${completionNote}</strong></p><p>${sourceNote}</p></div></article>`;
   const savePanel = trialEvaluationSavePanel();
   const nextStepGuide = realDataTrialNextStepGuidePanel();
   if (!rows.length) return `<div data-real-data-trial-results>${summary}${nextStepGuide}<article class="panel" style="margin-bottom:18px"><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成试算结果</strong><p>请先确认系统现有产品 BOM 资料。本页面不会导入 BOM，也不会修改正式 BOM。</p></div></article>${savePanel}</div>`;
@@ -1257,6 +1258,10 @@ function scrollToRealDataTrialInput(source) {
   document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function scrollToRealDataTrialResults() {
+  document.querySelector('[data-real-data-trial-results]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function navigate(page) { currentPage = page; history.replaceState(null, '', `#${page}`); render(); window.scrollTo(0, 0); }
 
 function bindEvents() {
@@ -1428,6 +1433,7 @@ function handleAction(action, dataset) {
         };
       }
       render();
+      if (realDataTrialPreview) scrollToRealDataTrialResults();
       return;
     }
 
@@ -1448,6 +1454,7 @@ function handleAction(action, dataset) {
       realDataTrialPreview = { source: REAL_DATA_TRIAL_SOURCE_SYSTEM, product, plannedQty, requiredDate: realDataTrialInputState.requiredDate, asOfDate: realDataTrialInputState.asOfDate, rows };
     }
     render();
+    if (realDataTrialPreview) scrollToRealDataTrialResults();
     return;
   }
   if (action === 'analyze') return navigate('analysis');
