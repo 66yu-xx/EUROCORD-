@@ -749,6 +749,18 @@ function realDataTrialRoleFocusPanel(rows) {
   return `<article class="panel" data-real-data-trial-role-focus style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">ROLE FOCUS</span><h3>角色关注点</h3></div><span class="version">老板 / 计划 / 采购</span></div><div class="entry-grid">${roles.map(([title, copy]) => `<div class="entry-card">${icon('layers', 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div><div class="placeholder-copy"><p>本结果仅为一次性试算，不保存，不影响库存，不创建采购单。</p></div></article>`;
 }
 
+function realDataTrialNextStepGuidePanel() {
+  // BOUNDARY_NOTICE / TRANSITION_COPY: Light reading guide only; it does not force workflow order or trigger business actions.
+  const steps = [
+    ['1. 先看试算结论摘要', '确认本次试算的整体判断、风险来源和需要优先关注的数量。'],
+    ['2. 再看关键风险物料', '优先确认缺料、采购周期待确认或库存低于安全库存的物料。'],
+    ['3. 接着看角色关注点', '老板、计划、采购可按同一份结果分别确认交付、排产和供应风险。'],
+    ['4. 最后看结果明细', '需要追溯原因时，再查看缺料结果、交期风险、采购建议和仓库确认点。'],
+  ];
+
+  return `<article class="panel" data-real-data-trial-next-step-guide style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">NEXT STEP GUIDE</span><h3>试算完成后的下一步建议</h3></div><span class="version">轻引导 · 不强制顺序</span></div><div class="placeholder-copy"><p>本次试算已经完成。建议先看下方“试算结论摘要”，再看“关键风险物料”，随后查看“角色关注点”和“结果明细”。如需留档，可在明细之后手动保存为接单评估记录。</p><p>保存后可在“已保存评估记录”列表复查；接单评估记录仍不等于正式订单，不确认接单，不影响库存，不创建采购需求或采购单，不进入财务或成本。</p></div><div class="entry-grid">${steps.map(([title, copy]) => `<div class="entry-card">${icon('chart', 22)}<span><strong>${title}</strong><small>${copy}</small></span></div>`).join('')}</div></article>`;
+}
+
 function realDataTrialResultPanel() {
   if (!realDataTrialPreview) return '';
 
@@ -761,7 +773,8 @@ function realDataTrialResultPanel() {
   const productLabel = isTemporary ? product.name : `${product.code} · ${product.name} · ${product.model}`;
   const summary = `<article class="panel" data-real-data-trial-result style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL RESULT</span><h3>一次性试算结果</h3></div><span class="version">${product.code} · 当前页面结果</span></div><div class="placeholder-form"><div><span>产品</span><strong>${productLabel}</strong></div><div><span>试算数量</span><strong>${format(plannedQty)} 台</strong></div><div><span>期望交期</span><strong>${requiredDate}</strong></div><div><span>试算日期</span><strong>${asOfDate}</strong></div><div><span>数据来源</span><strong>${sourceLabel}</strong></div></div><div class="placeholder-copy"><p>${sourceNote}</p></div></article>`;
   const savePanel = trialEvaluationSavePanel();
-  if (!rows.length) return `<div data-real-data-trial-results>${summary}${savePanel}<article class="panel" style="margin-bottom:18px"><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成试算结果</strong><p>请先确认系统现有产品 BOM 资料。本页面不会导入 BOM，也不会修改正式 BOM。</p></div></article></div>`;
+  const nextStepGuide = realDataTrialNextStepGuidePanel();
+  if (!rows.length) return `<div data-real-data-trial-results>${summary}${nextStepGuide}<article class="panel" style="margin-bottom:18px"><div class="empty-table"><strong>当前产品尚未维护 BOM，无法生成试算结果</strong><p>请先确认系统现有产品 BOM 资料。本页面不会导入 BOM，也不会修改正式 BOM。</p></div></article>${savePanel}</div>`;
 
   const shortageRows = rows.filter((row) => row.shortageQty > 0 || row.quantityRisk === 'low');
   const decisionLayer = `${realDataTrialDecisionSummaryPanel(rows)}${realDataTrialKeyRiskPanel(rows)}${realDataTrialRoleFocusPanel(rows)}`;
@@ -769,7 +782,7 @@ function realDataTrialResultPanel() {
   const riskTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">DELIVERY RISK</span><h3>交期风险</h3></div><span class="version">只读判断</span></div>${tableScrollHint()}<div class="table-wrap" style="${LOCAL_TABLE_SCROLL_STYLE}"><table style="min-width:860px"><thead><tr><th>物料</th><th>库存是否可覆盖</th><th>采购周期是否足够</th><th>预计到料时间</th><th>风险等级</th><th>风险原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.shortageQty > 0 ? '库存不足' : '库存可覆盖'}</td><td>${row.procurementLeadTimeDays === null ? '采购周期缺失，需人工确认' : row.riskLevel === 'critical' ? '预计不足' : '当前判断可参考'}</td><td>${row.expectedArrivalDate || (row.procurementLeadTimeDays === null ? '待确认' : '无需采购')}</td><td><span class="soft-tag">${row.deliveryRiskLabel}</span></td><td>${row.deliveryRiskReason}</td></tr>`).join('')}</tbody></table></div></article>`;
   const recommendationTable = `<article class="panel table-panel" style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">PROCUREMENT SUGGESTION</span><h3>采购建议</h3></div><span class="version">不创建采购单</span></div><div class="placeholder-copy"><p>采购建议只用于本次试算阅读，不保存建议，不创建采购单，不进入采购流程。</p></div>${tableScrollHint()}<div class="table-wrap" style="${LOCAL_TABLE_SCROLL_STYLE}"><table style="min-width:780px"><thead><tr><th>物料</th><th>建议动作</th><th>建议采购数量</th><th>优先级</th><th>原因</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${row.material.name}</td><td>${row.recommendation.action}</td><td><strong>${format(row.recommendation.recommendedQty)}</strong> ${row.material.unit}</td><td><span class="soft-tag">${row.recommendation.priority}</span></td><td>${row.recommendation.reason}</td></tr>`).join('')}</tbody></table></div></article>`;
   const warehousePoints = `<article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">WAREHOUSE CHECK</span><h3>仓库确认点</h3></div><span class="version">${shortageRows.length} 项关注</span></div><div class="entry-grid">${realDataTrialWarehousePoints(rows).map((point) => `<div class="entry-card">${icon('warehouse', 22)}<span><strong>${point}</strong><small>仅提示人工确认，不修改库存台账。</small></span></div>`).join('')}</div></article>`;
-  return `<div data-real-data-trial-results>${summary}${savePanel}${decisionLayer}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}</div>`;
+  return `<div data-real-data-trial-results>${summary}${nextStepGuide}${decisionLayer}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}${savePanel}</div>`;
 }
 
 function realDataTrialSourcePanel() {
@@ -1359,7 +1372,7 @@ function handleAction(action, dataset) {
     if (!realDataTrialPreview) return toast('请先完成一次试算');
     if (!saveTrialEvaluationRecord()) return toast('浏览器本地保存不可用，请稍后再试');
     render();
-    return toast('已保存为接单评估记录。该记录仅用于接单前复查，不代表正式订单，不影响库存，不创建采购单。');
+    return toast('已保存为接单评估记录，可到“已保存评估记录”列表复查。该记录不代表正式订单，不影响库存，不创建采购单。');
   }
   if (action === 'toggle-saved-evaluation-summary') {
     expandedTrialEvaluationRecordId = expandedTrialEvaluationRecordId === dataset.id ? '' : dataset.id;
