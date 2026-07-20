@@ -1,5 +1,31 @@
 # Project Status
 
+## Phase 9-Step 1 — Document product scope and role boundary direction - 2026-07-20
+
+- 当前阶段：`Phase 9-Step 1 - Document product scope and role boundary direction`
+- 中文定位：`产品范围与角色信息边界基础`
+- 启动基线：`40db6b6 freeze phase 8 real data trial flow`
+- 当前分支：`lufuta-material-system-lite`
+- 当前测试基线：`node --test tests/*.test.js`，51/51 pass
+- 详细范围文档：`PHASE9_SCOPE.md`
+- 本步骤只更新项目方向与边界文档，不实现功能代码。
+
+真实用户展示后的反馈说明，产品关注点已经从订单交期、库存和风险判断扩展到全工厂使用范围与角色信息边界。客户关心不同角色是否可以拥有不同权限，包括只查看不修改、查看数量但不查看价值 / 金额、限制仓库或车间查看销售敏感信息，以及让不同部门在同一业务链中看到不同信息并执行不同操作。
+
+Phase 9 只做三类工作：
+
+1. 把真实客户反馈正式写入产品方向。
+2. 定义第一版角色与信息边界原则。
+3. 明确后续顺序为 `Phase 10 — Role Access Minimum Prototype`，完成桥接验证后，再进入 `Phase 11 — Formal Order Minimum Loop`。
+
+第一版角色方向包括系统管理员、管理层、销售、计划与物料、采购、仓库、生产或车间、财务与成本、只读或审计。以上只是初步角色模型，不代表当前已经实现登录、用户、角色或完整权限系统。
+
+Phase 9 当前只定义模块访问、操作、数据范围和字段可见原则，明确数量与金额分离、销售敏感信息边界、采购价格 / 成本 / 毛利等敏感字段边界、多角色用户方向，以及未来关键操作需要记录操作者和时间。Phase 9 不开发正式订单，不改变库存，不生成采购需求或采购单，不进入金额、成本或财务，不新增导入，也不修改核心 MRP / 风险计算逻辑。
+
+Phase 8 不是未完成的中间状态。Phase 8 已完成并冻结一个独立可用的真实数据试算 / 接单评估演示闭环。Phase 9 是基于真实客户反馈扩展产品方向，不推翻、不替换 Phase 8，也不改变其冻结业务边界。
+
+Phase 10 尚未开始。Phase 11 尚未开始。
+
 ## Phase 8 Freeze - 2026-06-29
 
 - 当前稳定基线：`4b6ac1e scroll to trial results after run`
@@ -96,10 +122,10 @@ Phase 4 边界：
 
 Phase 5 可讨论仓库侧反馈能力，例如库存预警反馈、盘点异常记录、补货观察入口，以及仓库只读 / 反馈型角色边界。进入 Phase 5 前仍需单独确认范围，不能从 Phase 4 Freeze 自动延伸为业务执行能力。
 
-## 当前状态
+## 历史状态：V3 / Phase 4-Step 1
 
 - 项目：`Lufuta Material Management System Lite`
-- 当前阶段：V3 / Phase 4-Step 1 — 系统演示路径设计
+- 当时阶段：V3 / Phase 4-Step 1 — 系统演示路径设计
 - 当前分支：`lufuta-material-system-lite`
 - 当前稳定基线：`b9da4e8 polish warehouse feedback read-only copy`
 - 当前测试基线：47/47 通过

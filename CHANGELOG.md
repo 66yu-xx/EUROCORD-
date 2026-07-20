@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-20 - Phase 9-Step 1 — Document product scope and role boundary direction
+
+- 正式启动 `Phase 9 — Product Scope & Role Boundary Foundation` 的第一步，中文定位为“产品范围与角色信息边界基础”。
+- 新增 `PHASE9_SCOPE.md`，记录真实客户对全工厂使用、不同角色权限、只读访问、数量与金额分离、销售敏感信息隔离，以及跨部门信息和操作边界的反馈。
+- 定义第一版初步角色模型：系统管理员、管理层、销售、计划与物料、采购、仓库、生产或车间、财务与成本、只读或审计。
+- 定义第一版权限原则：模块访问权限、查看 / 创建 / 修改 / 确认 / 删除 / 导出等操作权限、数据范围权限、字段可见权限、数量与金额分离、销售敏感信息边界、采购价格 / 成本 / 毛利等敏感字段边界、多角色用户方向，以及未来关键操作的操作者和时间记录。
+- 明确以上内容只是产品方向与初步边界模型，不代表已经实现完整登录、用户数据库、角色配置器、逐字段权限编辑器、审批流或操作日志系统。
+- 明确后续顺序为 `Phase 9 — Product Scope & Role Boundary Foundation` → `Phase 10 — Role Access Minimum Prototype` → 桥接验证 → `Phase 11 — Formal Order Minimum Loop`。
+- 桥接验证需要确认角色边界是否合理、接单评估到正式订单的转换点是否清楚、正式订单最小数据结构是否明确，以及 Phase 8 原流程是否仍正常。
+- Phase 8 已完成并冻结独立可用的接单评估 / 真实数据试算演示闭环；Phase 9 不推翻 Phase 8，也不修改其业务逻辑。
+- 本步骤只修改项目文档，不修改 `src/*`、`tests/*`、`index.html`、`package.json`，不实现权限、正式订单、库存、采购、金额、成本、财务或导入功能，不进入 Phase 10。
+- 验证结果：`node --test tests/*.test.js` 51/51 pass，`git diff --check` 通过。
+
 ## 2026-06-29 - Phase 8 Freeze
 
 - 冻结当前稳定基线：`4b6ac1e scroll to trial results after run`，分支为 `lufuta-material-system-lite`。
