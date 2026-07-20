@@ -1,5 +1,6 @@
 import { initialData } from './data.js';
 import { calculateMaterialRequirements, getInventoryStatusCounts, getSummary } from './mrp.js';
+import { getSupportedRoles, isSupportedRole } from './roleAccess.js';
 import { formatProcurementLeadTimeDays, resolveProcurementLeadTimeDays } from './planning/procurementLeadTime.js';
 import { buildProcurementRecommendation } from './planning/procurementRecommendation.js';
 import { calculateProcurementRisk } from './planning/procurementRisk.js';
@@ -18,6 +19,8 @@ const inventoryService = createInventoryService({ repository });
 const auditService = createAuditService({ repository });
 let data = repository.getSnapshot();
 let currentPage = 'dashboard';
+const DEFAULT_DEMO_ROLE_ID = 'sales';
+let currentDemoRoleId = DEFAULT_DEMO_ROLE_ID;
 let toastTimer;
 let selectedOrderEvaluationId = data.orderEvaluationRecords?.[0]?.id || null;
 const DEMO_DELIVERY_RISK_ORDER = {
@@ -302,13 +305,15 @@ const PAGE_OVERFLOW_GUARD_STYLE = `<style id="page-overflow-guard">
 
 function appShell(content) {
   const active = pages.find((p) => p[0] === currentPage) || ['order-evaluation-detail', '接单评估记录详情', 'chart'];
+  const currentRole = getSupportedRoles().find((role) => role.id === currentDemoRoleId);
+  const roleOptions = getSupportedRoles().map((role) => `<option value="${role.id}" ${role.id === currentDemoRoleId ? 'selected' : ''}>${role.label}</option>`).join('');
   return `${PAGE_OVERFLOW_GUARD_STYLE}<div class="shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">L</div><div><strong>LUFUTA LITE</strong><small>物料管理系统</small></div></div>
       <nav><p>演示导览</p>${pages.map(([id, label, ico]) => `<button class="nav-item ${currentPage === id ? 'active' : ''}" data-page="${id}">${icon(ico)}<span>${label}</span></button>`).join('')}</nav>
       <div class="sidebar-footer"><div class="demo-dot"></div><div><strong>只读演示</strong><small>当前使用浏览器存储</small></div><button class="reset-button" data-action="reset-data" title="重置演示数据"><b>↺</b><span>重置演示数据</span></button></div>
     </aside>
-    <main><header><div><small>LUFUTA 物料管理系统 LITE / ${active[1]}</small><h1>${active[1]}</h1></div><div class="header-actions"><span class="date">${new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date())}</span><button class="avatar">L</button></div></header><section class="content">${content}</section></main>
+    <main><header><div class="header-title"><small>LUFUTA 物料管理系统 LITE / ${active[1]}</small><h1>${active[1]}</h1></div><div class="header-actions"><span class="date">${new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date())}</span><label class="demo-role-switcher"><span><small>DEMO ROLE</small><strong>${currentRole?.label || 'Sales'}</strong></span><select data-demo-role-switcher aria-label="切换演示角色">${roleOptions}</select><em>演示视图 · 非登录身份</em></label><button class="avatar">L</button></div></header><section class="content">${content}</section></main>
     <div id="modal-root"></div><div id="toast" class="toast"></div>
   </div>`;
 }
@@ -1266,6 +1271,14 @@ function navigate(page) { currentPage = page; history.replaceState(null, '', `#$
 
 function bindEvents() {
   document.querySelectorAll('[data-page]').forEach((el) => el.addEventListener('click', () => navigate(el.dataset.page)));
+  document.querySelector('[data-demo-role-switcher]')?.addEventListener('change', (event) => {
+    if (!isSupportedRole(event.target.value)) {
+      event.target.value = currentDemoRoleId;
+      return;
+    }
+    currentDemoRoleId = event.target.value;
+    render();
+  });
   document.querySelectorAll('[data-product-tab]').forEach((el) => el.addEventListener('click', () => { sessionStorage.setItem('selectedProduct', el.dataset.productTab); render(); }));
   document.querySelectorAll('[data-delivery-risk-input]').forEach((input) => input.addEventListener('input', () => {
     deliveryRiskInputState[input.name] = input.value;
