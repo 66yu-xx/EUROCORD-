@@ -4,14 +4,15 @@
 
 ## 1. 文档状态
 
-- 当前步骤：`Phase 9-Step 2 - Define minimum role and information boundary rules`
+- 当前步骤：`Phase 9-Step 3 - Define Phase 10 prototype surface`
 - 启动日期：2026-07-20
 - Step 1 完成基线：`c3a5404 define phase 9 product scope and role boundaries`
 - 当前分支：`lufuta-material-system-lite`
 - 第一版角色边界规则：`ROLE_ACCESS_MATRIX.md`
+- Phase 10 原型范围：`PHASE10_PROTOTYPE_SCOPE.md`
 - 当前性质：产品方向与边界文档，不是功能实现
 
-Phase 9-Step 1 已把真实客户反馈、初步角色模型、信息边界原则和后续阶段顺序写清楚。Phase 9-Step 2 只把这些原则整理为可指导 Phase 10 最小原型的第一版固定规则，不创建登录、用户、角色、权限、订单、库存、采购、成本或财务功能，也不改变现有运行行为。
+Phase 9-Step 1 已把真实客户反馈、初步角色模型、信息边界原则和后续阶段顺序写清楚。Phase 9-Step 2 已把这些原则整理为可指导 Phase 10 最小原型的第一版固定规则。Phase 9-Step 3 只根据当前代码与页面盘点结果定义 Phase 10 的实施范围，不创建登录、用户、角色、权限、订单、库存、采购、生产计划、成本或财务功能，也不改变现有运行行为。
 
 ## 2. 与 Phase 8 的关系
 
@@ -128,7 +129,7 @@ Phase 9 的产出是可供后续原型设计使用的边界基础，不是完整
 
 ### Phase 10 — Role Access Minimum Prototype
 
-在 Phase 9 完成并由 Product Owner 单独确认后，才可定义和实现最小角色访问原型。Phase 10 的具体页面、数据、验证方式和技术实现尚未在本步骤确定。
+Phase 9-Step 3 已在 `PHASE10_PROTOTYPE_SCOPE.md` 中定义第一版页面、现有数据、验证方式和技术边界，但没有启动实现。只有 Product Owner 单独确认进入 Phase 10 后，才可按该边界实现最小角色访问原型。
 
 ### Phase 10 完成前桥接验证
 
@@ -209,4 +210,24 @@ Phase 10 尚未开始。Phase 8 保持冻结，权限层未来只能影响“看
 - Phase 10 的六项最小验证目标和明确不解决的问题已记录。
 - Phase 8 冻结边界和 MRP / 风险计算一致性要求已保留。
 - Phase 10 尚未开始，后续阶段顺序未改变。
+- 本步骤只修改文档，不修改业务代码、数据模型或测试。
+
+## 12. Phase 9-Step 3 原型范围决定
+
+Phase 10 第一版只以“真实数据试算”作为核心验证页面。该页面已有数据来源选择、试算输入、运行试算、结果摘要、风险结果、缺料信息、采购周期、采购建议、仓库确认点和本地接单评估记录，已经足够验证 View、Edit、Action Permission 和 Sensitive Information Boundary。其他页面只作为未来补充或验证参考，不是首批必做范围。
+
+五个最小角色继续保持为 Management、Sales、Purchasing、Warehouse、Production / Workshop。Sales 可使用 Phase 8 已有的输入、运行、保存和本地摘要查看动作；其余角色按 `ROLE_ACCESS_MATRIX.md` 和 `PHASE10_PROTOTYPE_SCOPE.md` 使用不同的只读信息范围。任何角色都不得因此获得正式订单、库存执行、采购执行或生产执行能力。
+
+第一版不新增模拟敏感字段，优先使用 Phase 8 现有数据和现有演示询单备注。`Demo Role Switcher` 只可使用固定五角色和前端临时状态，刷新后恢复默认角色；它不包含登录、账号、密码、用户数据库或后端权限同步，也不是正式安全权限系统。
+
+预计技术范围最多为 `src/app.js`、`src/styles.css`、可选的 `src/roleAccess.js` 和新增的 `tests/roleAccess.test.js`。未经独立批准，不得修改 `src/data.js`、`src/mrp.js` 或 `src/planning/*`。
+
+相同业务输入在所有角色下必须产生完全一致的 MRP、风险、缺料和采购建议计算结果。角色权限只能改变区域、字段和现有动作的可见或可用状态。完整实施边界记录在 `PHASE10_PROTOTYPE_SCOPE.md`。
+
+## 13. Phase 9-Step 3 状态
+
+- 本步骤是 Phase 10 实施范围定义，不是权限功能实现。
+- Phase 10 尚未开始，Phase 8 继续保持冻结。
+- Phase 9 的规划目标至此基本完成。
+- Phase 10 完成后仍必须进行四项桥接验证，验证通过并由 Product Owner 单独确认后，才可进入 Phase 11。
 - 本步骤只修改文档，不修改业务代码、数据模型或测试。

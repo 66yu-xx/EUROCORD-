@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-20 - Phase 9-Step 3 — Define Phase 10 prototype surface
+
+- 新增 `PHASE10_PROTOTYPE_SCOPE.md`，把只读代码和页面盘点结论固定为 Phase 10 最小角色访问原型的实施边界。
+- 确定 Phase 10 第一版只以“真实数据试算”为核心验证页面；其他页面只作为未来补充或验证参考，不是首批必做范围。
+- 固定 Management、Sales、Purchasing、Warehouse、Production / Workshop 在现有页面上的最小信息与动作映射；Sales 只保留 Phase 8 已有输入、运行、保存和本地摘要查看动作，其余角色主要只读。
+- 第一版不新增模拟敏感字段；如未来验收确需金额可见性的强视觉对比，只能另行批准不进入数据、存储或计算的纯前端 `DEMO_ONLY` 常量。
+- 建议 Phase 10 使用仅保存在前端临时状态的固定五角色 `Demo Role Switcher`，不开发登录、账号、密码、用户数据库或后端权限同步，也不宣称为正式安全权限系统。
+- 预计 Phase 10 最多涉及 `src/app.js`、`src/styles.css`、可选的 `src/roleAccess.js` 和新增的 `tests/roleAccess.test.js`；未经独立批准，不修改 `src/data.js`、`src/mrp.js` 或 `src/planning/*`。
+- 明确相同输入在所有角色下的 MRP、风险、缺料和采购建议结果必须完全一致；Phase 10 完成后仍需通过四项桥接验证，才能由 Product Owner 单独确认是否进入 Phase 11。
+- 本步骤只修改文档，没有实现权限代码；Phase 10 尚未开始，Phase 8 保持冻结，Phase 9 的规划目标至此基本完成。
+
 ## 2026-07-20 - Phase 9-Step 2 — Define minimum role and information boundary rules
 
 - 新增 `ROLE_ACCESS_MATRIX.md`，将 Phase 9-Step 1 的角色和信息边界原则整理为可指导 Phase 10 最小原型的第一版规则。

@@ -1,5 +1,26 @@
 # Project Status
 
+## Phase 9-Step 3 — Define Phase 10 prototype surface - 2026-07-20
+
+- 当前阶段：`Phase 9-Step 3 - Define Phase 10 prototype surface`
+- 启动基线：`80e00de define minimum role access boundaries`
+- 当前分支：`lufuta-material-system-lite`
+- 当前测试基线：`node --test tests/*.test.js`，51/51 pass
+- 原型范围文档：`PHASE10_PROTOTYPE_SCOPE.md`
+- 本步骤只定义 Phase 10 实施范围，不实现权限功能。
+
+Phase 10 第一版只以“真实数据试算”为核心验证页面，不扩展到所有页面。固定角色仍为 Management、Sales、Purchasing、Warehouse、Production / Workshop。
+
+Management 主要只读查看结论、关键风险、角色关注点和必要评估摘要；Sales 可使用 Phase 8 已有的数据来源切换、输入编辑、运行试算、保存本地评估记录和摘要查看动作；Purchasing、Warehouse、Production / Workshop 只读查看职责所需的现有信息。清空全部本地测试记录不是普通销售权限，任何角色都不获得正式订单、库存、采购或生产执行能力。
+
+第一版不新增模拟敏感字段。未来如确需强视觉金额对比，只能另行批准纯前端 `DEMO_ONLY` 常量，且不得进入 `src/data.js`、LocalStorage、计算或正式数据模型。
+
+Phase 10 建议使用固定五角色的 `Demo Role Switcher`，只保存前端临时状态，刷新后恢复默认角色；不实现登录、账号、密码、用户数据库或后端权限同步，也不宣称为正式安全权限系统。
+
+预计 Phase 10 最多涉及 `src/app.js`、`src/styles.css`、可选的 `src/roleAccess.js` 和新增的 `tests/roleAccess.test.js`。未经独立批准，不修改 `src/data.js`、`src/mrp.js` 或 `src/planning/*`。相同输入在所有角色下的 MRP、风险、缺料和采购建议结果必须完全一致。
+
+Phase 10 尚未开始，Phase 8 继续保持冻结。Phase 9 的规划目标至此基本完成；后续仍按 Phase 10 最小权限原型 → 四项桥接验证 → Phase 11 正式订单最小闭环推进。
+
 ## Phase 9-Step 2 — Define minimum role and information boundary rules - 2026-07-20
 
 - 当前阶段：`Phase 9-Step 2 - Define minimum role and information boundary rules`

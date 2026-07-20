@@ -1,6 +1,21 @@
 # Roadmap
 
-## 当前里程碑：Phase 9-Step 2 — Define minimum role and information boundary rules
+## 当前里程碑：Phase 9-Step 3 — Define Phase 10 prototype surface
+
+- 启动基线：`80e00de define minimum role access boundaries`
+- 当前分支：`lufuta-material-system-lite`
+- 原型范围文档：`PHASE10_PROTOTYPE_SCOPE.md`
+- 当前步骤只定义 Phase 10 实施范围，不实现权限代码，不进入 Phase 10。
+
+Phase 10 第一版只以“真实数据试算”为核心验证页面，固定角色为 Management、Sales、Purchasing、Warehouse、Production / Workshop。第一版使用现有 Phase 8 数据和演示询单备注，不新增模拟敏感字段或正式业务模块。
+
+建议使用仅保存在前端临时状态的 `Demo Role Switcher`。预计技术范围最多为 `src/app.js`、`src/styles.css`、可选的 `src/roleAccess.js` 和新增的 `tests/roleAccess.test.js`；未经独立批准，不修改 `src/data.js`、`src/mrp.js` 或 `src/planning/*`。
+
+角色权限只能改变看什么、哪些区域或字段显示、哪些现有动作允许执行；相同输入下的 MRP、风险、缺料和采购建议结果必须完全一致。Phase 10 尚未开始，Phase 8 继续保持冻结，Phase 9 的规划目标至此基本完成。
+
+后续顺序保持不变：Phase 9 → Phase 10 最小权限原型 → 四项桥接验证 → Phase 11 正式订单最小闭环。
+
+## 已完成里程碑：Phase 9-Step 2 — Define minimum role and information boundary rules
 
 - 启动基线：`c3a5404 define phase 9 product scope and role boundaries`
 - 当前分支：`lufuta-material-system-lite`
@@ -56,7 +71,7 @@ Phase 8-Step 15 和 Step 15B 已完成体验收口：运行试算后增加下一
 
 Phase 8 边界：当前仍不是正式订单系统，接单评估记录不等于正式订单；不确认接单、不作废业务记录、不转订单、不占用库存、不扣减库存、不生成采购需求或采购单、不计算金额、不进入财务 / 成本、不新增 Excel / CSV / PDF 导入、不修改核心 MRP / 风险计算逻辑、不自动保存接单评估记录。
 
-Phase 8 冻结时，Phase 9 尚未开始。当前已经进入仅文档规则设计性质的 `Phase 9-Step 2`，尚未开始 Phase 9 的功能实现。Phase 9 不能直接跳入正式订单系统。
+Phase 8 冻结时，Phase 9 尚未开始。当前已经进入仅文档范围定义性质的 `Phase 9-Step 3`，仍未开始 Phase 10 功能实现。Phase 9 不能直接跳入正式订单系统。
 
 ## 当前里程碑：V3 / Phase 5 Freeze
 

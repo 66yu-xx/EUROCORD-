@@ -8,6 +8,7 @@
 - 启动基线：`c3a5404 define phase 9 product scope and role boundaries`
 - 当前分支：`lufuta-material-system-lite`
 - 上位范围文档：`PHASE9_SCOPE.md`
+- Phase 10 原型范围：`PHASE10_PROTOTYPE_SCOPE.md`
 - 当前性质：规则设计，不是功能实现
 
 本文档把 Phase 9-Step 1 的原则整理为可直接指导 Phase 10 最小权限原型设计的第一版固定规则。它不代表 Phase 10 已经开始，也不创建登录、账号、用户数据库、权限配置页面或正式业务权限。
@@ -276,7 +277,7 @@ Phase 9
   -> Phase 11 正式订单最小闭环
 ```
 
-Phase 10 尚未开始。进入 Phase 10 前仍需由 Product Owner 单独确认实现范围、角色切换方式、页面范围和验证标准。
+Phase 10 尚未开始。Phase 9-Step 3 已在 `PHASE10_PROTOTYPE_SCOPE.md` 中定义页面、角色切换方式、技术边界和验证标准；仍需由 Product Owner 单独启动 Phase 10 后才能实现。
 
 Phase 8 继续保持冻结。当前系统仍不是正式订单系统，不占用或扣减库存，不生成采购需求或采购单，不进入金额、成本或财务，不修改核心 MRP / 风险计算逻辑。
 
@@ -290,3 +291,12 @@ Phase 8 继续保持冻结。当前系统仍不是正式订单系统，不占用
 - Phase 10 的六项验证目标和不需要解决的问题已明确。
 - Phase 8 冻结边界和后续阶段顺序保持不变。
 - 本步骤只修改文档，不进入 Phase 10 实现。
+
+## 13. Phase 9-Step 3 原型表面确认
+
+- Phase 10 第一版只以“真实数据试算”为核心验证页面，不扩展到所有页面。
+- Management 主要查看结论、关键风险、角色关注点和必要评估摘要；Sales 保留 Phase 8 已有输入、运行、保存和本地摘要查看动作；Purchasing、Warehouse、Production / Workshop 使用职责范围内的只读信息。
+- 第一版不新增模拟敏感字段，不新增正式销售、供应商、客户、生产计划、金额、成本或毛利数据。
+- `Demo Role Switcher` 只使用固定五角色和前端临时状态，不是登录、用户系统或正式安全权限系统。
+- 相同输入下的 MRP、风险、缺料和采购建议结果必须对所有角色保持一致。
+- 详细实施边界以 `PHASE10_PROTOTYPE_SCOPE.md` 为准；本确认不代表 Phase 10 已经开始。
