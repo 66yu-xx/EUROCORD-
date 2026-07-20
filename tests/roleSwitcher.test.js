@@ -46,8 +46,7 @@ test('demo role state is memory-only and resets on refresh', () => {
   assert.doesNotMatch(appSource, /URLSearchParams|data-demo-role-switcher[^\n]*(?:localStorage|sessionStorage)/);
 });
 
-test('role switcher adds no login backend or role filtering', () => {
+test('role switcher adds no login or backend dependency', () => {
   assert.match(appSource, /演示视图 · 非登录身份/);
-  assert.doesNotMatch(appSource, /import \{[^}]*canRole(?:View|Perform)[^}]*\} from '\.\/roleAccess\.js'/);
   assert.doesNotMatch(appSource, /data-demo-role-switcher[^\n]*(?:fetch\(|XMLHttpRequest|WebSocket)/);
 });
