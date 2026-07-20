@@ -21,7 +21,6 @@ let data = repository.getSnapshot();
 let currentPage = 'dashboard';
 const DEFAULT_DEMO_ROLE_ID = 'sales';
 let currentDemoRoleId = DEFAULT_DEMO_ROLE_ID;
-const TRIAL_ACCESS_POLICY_ROLE_IDS = Object.freeze(['sales', 'management']);
 const TRIAL_UI_ACTION_PERMISSIONS = Object.freeze({
   'set-real-data-trial-source': ROLE_ACTIONS.CHANGE_DATA_SOURCE,
   'add-temp-trial-material': ROLE_ACTIONS.EDIT_TRIAL_INPUT,
@@ -77,16 +76,16 @@ function formatDateInputValue(date) {
   return `${year}-${month}-${day}`;
 }
 
-function isTrialAccessPolicyActive() {
-  return TRIAL_ACCESS_POLICY_ROLE_IDS.includes(currentDemoRoleId);
+function getCurrentDemoRole() {
+  return getSupportedRoles().find((role) => role.id === currentDemoRoleId) || null;
 }
 
 function canCurrentRoleView(area) {
-  return isTrialAccessPolicyActive() ? canRoleView(currentDemoRoleId, area) : isSupportedRole(currentDemoRoleId);
+  return canRoleView(currentDemoRoleId, area);
 }
 
 function canCurrentRolePerform(action) {
-  return isTrialAccessPolicyActive() ? canRolePerform(currentDemoRoleId, action) : isSupportedRole(currentDemoRoleId);
+  return canRolePerform(currentDemoRoleId, action);
 }
 
 function currentRoleControlState(action) {
@@ -335,7 +334,7 @@ const PAGE_OVERFLOW_GUARD_STYLE = `<style id="page-overflow-guard">
 
 function appShell(content) {
   const active = pages.find((p) => p[0] === currentPage) || ['order-evaluation-detail', '接单评估记录详情', 'chart'];
-  const currentRole = getSupportedRoles().find((role) => role.id === currentDemoRoleId);
+  const currentRole = getCurrentDemoRole();
   const roleOptions = getSupportedRoles().map((role) => `<option value="${role.id}" ${role.id === currentDemoRoleId ? 'selected' : ''}>${role.label}</option>`).join('');
   return `${PAGE_OVERFLOW_GUARD_STYLE}<div class="shell">
     <aside class="sidebar">
@@ -725,6 +724,7 @@ function savedEvaluationRecordListPanel() {
 }
 
 function evaluationRecordStatusBoundaryPanel() {
+  if (!canCurrentRoleView(ROLE_VIEW_AREAS.EVALUATION_SUMMARY)) return '';
   // BOUNDARY_NOTICE / TRANSITION_COPY: These are future status meanings only; Step 13 does not add status actions.
   const statuses = [
     ['待确认', '该评估记录仅代表一次接单前试算结果，仍需要人工确认客户需求、库存实物、采购周期和内部接单意见。'],
@@ -736,6 +736,7 @@ function evaluationRecordStatusBoundaryPanel() {
 }
 
 function evaluationWorkflowDemoPathPanel() {
+  if (!canCurrentRoleView(ROLE_VIEW_AREAS.CUSTOMER_INQUIRY_NOTE)) return '';
   // BOUNDARY_NOTICE / TRANSITION_COPY: This explains the current demo reading path only; it adds no business execution.
   const steps = [
     ['01 选择数据来源', '选择系统已有产品 / BOM / 库存，或在资料不完整时手动输入临时试算数据。', 'layers'],
@@ -811,9 +812,16 @@ function realDataTrialResultPanel() {
   const sourceNote = isTemporary
     ? '当前结果基于手动输入的临时数据生成，仅用于一次性测试。不会保存临时产品、临时物料、临时 BOM 或临时库存；可由用户手动保存摘要级接单评估记录。'
     : '本结果只保存在当前页面状态中，不保存正式订单；可由用户手动保存摘要级接单评估记录，不影响或扣减库存，不创建采购单。';
+  const readableResultSections = [
+    canCurrentRoleView(ROLE_VIEW_AREAS.RISK_SUMMARY) ? '试算结论和关键风险' : '',
+    canCurrentRoleView(ROLE_VIEW_AREAS.ROLE_FOCUS) ? '角色关注点' : '',
+    canCurrentRoleView(ROLE_VIEW_AREAS.MATERIAL_REQUIREMENTS) ? '结果明细' : '',
+    canCurrentRoleView(ROLE_VIEW_AREAS.PURCHASE_GUIDANCE) ? '采购建议' : '',
+    canCurrentRoleView(ROLE_VIEW_AREAS.WAREHOUSE_FOCUS) ? '仓库确认点' : '',
+  ].filter(Boolean).join('、');
   const completionNote = canCurrentRolePerform(ROLE_ACTIONS.RUN_TRIAL)
     ? '试算已完成，结果已生成。建议先看下方“下一步建议”和“试算结论摘要”。'
-    : '试算已完成，结果已保留。请查看下方试算结论、关键风险、角色关注点和结果明细。';
+    : `试算已完成，结果已保留。请查看下方${readableResultSections || '当前角色可见的结果'}。`;
   const productLabel = isTemporary ? product.name : `${product.code} · ${product.name} · ${product.model}`;
   const summary = `<article class="panel" data-real-data-trial-result style="margin-bottom:18px"><div class="panel-head"><div><span class="kicker">TRIAL RESULT</span><h3>一次性试算结果</h3></div><span class="version">${product.code} · 当前页面结果</span></div><div class="placeholder-form"><div><span>产品</span><strong>${productLabel}</strong></div><div><span>试算数量</span><strong>${format(plannedQty)} 台</strong></div><div><span>期望交期</span><strong>${requiredDate}</strong></div><div><span>试算日期</span><strong>${asOfDate}</strong></div><div><span>数据来源</span><strong>${sourceLabel}</strong></div></div><div class="placeholder-copy"><p><strong>${completionNote}</strong></p><p>${sourceNote}</p></div></article>`;
   const savePanel = canCurrentRolePerform(ROLE_ACTIONS.SAVE_EVALUATION) ? trialEvaluationSavePanel() : '';
@@ -833,7 +841,25 @@ function realDataTrialResultPanel() {
   return `<div data-real-data-trial-results>${summary}${nextStepGuide}${decisionLayer}${shortageTable}${riskTable}${recommendationTable}${warehousePoints}${savePanel}</div>`;
 }
 
+function realDataTrialFlowSteps() {
+  const inputSteps = ['系统现有资料或临时录入', 'BOM / 用量', '库存', '采购周期'];
+  const resultSteps = [
+    [ROLE_VIEW_AREAS.MATERIAL_REQUIREMENTS, '缺料结果'],
+    [ROLE_VIEW_AREAS.MATERIAL_REQUIREMENTS, '交期风险'],
+    [ROLE_VIEW_AREAS.PURCHASE_GUIDANCE, '采购建议'],
+    [ROLE_VIEW_AREAS.WAREHOUSE_FOCUS, '仓库确认点'],
+  ].filter(([area]) => canCurrentRoleView(area)).map(([, label]) => label);
+  const renderSteps = (steps) => steps.map((label) => `<span>${label}</span>`).join('<b>+</b>');
+  return `${renderSteps(inputSteps)}<b>→</b>${renderSteps(resultSteps)}`;
+}
+
+function applyRealDataTrialFlowAccess() {
+  const flow = document.querySelector('[data-real-data-trial-page] > .workflow-panel .workflow-steps');
+  if (flow) flow.innerHTML = realDataTrialFlowSteps();
+}
+
 function realDataTrialSourcePanel() {
+  if (!canCurrentRoleView(ROLE_VIEW_AREAS.TRIAL_INPUT)) return '';
   // BOUNDARY_NOTICE: 数据来源选择只切换当前页面试算输入，不保存正式资料或触发业务动作。
   const sources = [
     [REAL_DATA_TRIAL_SOURCE_SYSTEM, '系统现有资料试算', '读取已维护的产品、BOM、库存和采购周期，仅用于本次试算。', 'layers'],
@@ -875,6 +901,10 @@ function realDataTrialTemporaryForm() {
 }
 
 function orderEvaluationBoundaryNotesPanel() {
+  if (!canCurrentRoleView(ROLE_VIEW_AREAS.EVALUATION_SUMMARY)) return '';
+  if (!canCurrentRoleView(ROLE_VIEW_AREAS.CUSTOMER_INQUIRY_NOTE)) {
+    return `<article class="panel" data-order-evaluation-boundary-notes style="margin-bottom:18px;max-width:100%"><div class="panel-head"><div><span class="kicker">EVALUATION SUMMARY BOUNDARY</span><h3>评估摘要阅读边界</h3></div><span class="version">只读参考</span></div><div class="placeholder-copy"><p>当前角色只读取已保存评估记录中的产品、数量、日期、风险结论和关键物料摘要，用于采购风险参考。</p><p>本区不提供保存、修改、状态转换或采购执行动作。</p></div></article>`;
+  }
   // BOUNDARY_NOTICE / TRANSITION_COPY: 接单评估记录说明区保留阶段边界；Step 11 只允许保存摘要级本地记录，不触发正式业务动作。
   const recordFields = [
     '评估编号',
@@ -923,8 +953,9 @@ function realDataTrialPage() {
   const canViewTrialInput = canCurrentRoleView(ROLE_VIEW_AREAS.TRIAL_INPUT);
   const canViewEvaluationSummary = canCurrentRoleView(ROLE_VIEW_AREAS.EVALUATION_SUMMARY);
   const canRunTrial = canCurrentRolePerform(ROLE_ACTIONS.RUN_TRIAL);
-  const roleAccessNotice = isTrialAccessPolicyActive() && !canRunTrial
-    ? `<article class="role-access-notice" data-trial-role-access-notice><span class="kicker">DEMO ROLE ACCESS</span><strong>当前角色为 Management · 只读查看</strong><p>${realDataTrialPreview ? '当前试算输入和结果已保留。你可以查看该角色允许的结论、关键风险、角色关注点和评估摘要。' : '请先由可操作角色完成试算后，再查看结果。当前不会自动切换角色、运行试算或伪造结果。'}</p></article>`
+  const currentRoleLabel = getCurrentDemoRole()?.label || 'Unknown';
+  const roleAccessNotice = !canRunTrial
+    ? `<article class="role-access-notice" data-trial-role-access-notice><span class="kicker">DEMO ROLE ACCESS</span><strong>当前角色为 ${currentRoleLabel} · 只读查看</strong><p>${realDataTrialPreview ? '当前试算输入和结果已保留。你可以查看该角色权限允许的现有结果。' : '当前角色为只读角色，请先由可操作角色完成试算后再查看相关结果。当前不会自动切换角色、运行试算或伪造结果。'}</p></article>`
     : '';
   const trialForm = canViewTrialInput
     ? realDataTrialInputState.source === REAL_DATA_TRIAL_SOURCE_TEMPORARY ? realDataTrialTemporaryForm() : realDataTrialSystemForm(productOptions)
@@ -1314,6 +1345,7 @@ function render() {
     'supplier-return': () => documentPlaceholder('退货占位', '后续可记录退回供应商方向', '当前不提供退货单填写、保存、审核或库存扣减。'),
   };
   document.querySelector('#app').innerHTML = appShell(renderers[currentPage]());
+  applyRealDataTrialFlowAccess();
   bindEvents();
 }
 
