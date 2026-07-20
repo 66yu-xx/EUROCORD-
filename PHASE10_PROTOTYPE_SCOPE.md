@@ -4,11 +4,13 @@
 
 ## 1. 文档状态
 
-- 当前步骤：`Phase 9-Step 3 - Define Phase 10 prototype surface`
+- 原规划步骤：`Phase 9-Step 3 - Define Phase 10 prototype surface`
 - 启动基线：`80e00de define minimum role access boundaries`
-- 当前性质：实施范围定义，不是功能实现
+- 当前性质：原型实施范围记录；实现已按此边界完成
 - Phase 8：继续保持冻结
-- Phase 10：尚未开始
+- Phase 10：已完成并冻结
+- 已验证实现基线：`0626200 apply remaining trial role views`
+- 冻结记录：`PHASE10_FREEZE.md`
 
 ## 2. 第一版核心验证页面
 
@@ -42,18 +44,20 @@ Phase 10 第一版不需要实现该常量。
 
 ## 5. Demo Role Switcher 边界
 
-Phase 10 第一版建议采用 `Demo Role Switcher`，固定角色为 Management、Sales、Purchasing、Warehouse、Production / Workshop。
+Phase 10 第一版已采用 `Demo Role Switcher`，固定角色为 Management、Sales、Purchasing、Warehouse、Production / Workshop。
 
 角色选择只保存在前端临时状态，刷新后恢复默认角色。不开发正式登录、账号、密码、用户数据库或后端权限同步，也不宣称这是正式安全权限系统。它只用于验证同一业务数据在不同角色下如何呈现和限制操作。
 
 ## 6. 最小技术边界
 
-Phase 10 预计最多涉及：
+Phase 10 实际实现涉及：
 
 - `src/app.js`
 - `src/styles.css`
-- 可选新增纯角色配置模块 `src/roleAccess.js`
-- 新增 `tests/roleAccess.test.js`
+- `src/roleAccess.js`
+- `tests/roleAccess.test.js`
+- `tests/roleSwitcher.test.js`
+- `tests/trialRoleAccessUi.test.js`
 
 未经未来独立批准，不得修改：
 
@@ -74,19 +78,20 @@ Phase 10 不得改变任何 MRP 输入、MRP 输出、风险计算或采购建�
 - 哪些字段显示。
 - 哪些现有动作允许执行。
 
-角色权限不得进入、修改或分叉业务计算逻辑。Phase 10 需要增加角色访问规则测试，并保留 Phase 8 现有回归测试。
+角色权限不得进入、修改或分叉业务计算逻辑。Phase 10 已增加角色访问规则和 UI 边界测试，并保留 Phase 8 现有回归测试。
 
-## 8. Phase 10 完成后的桥接验证
+## 8. Phase 11 Pre-Bridge Validation
 
 进入 Phase 11 前必须确认：
 
 1. 角色边界是否合理。
 2. 接单评估到正式订单的转换点是否清楚。
 3. 正式订单最小数据结构是否明确。
-4. Phase 8 原流程是否仍然正常。
+4. Phase 8 原有试算路径是否继续保持独立和正常。
+5. Phase 11 是否可以在不破坏 Phase 8 和 Phase 10 的情况下开始。
 
 只有桥接验证通过并由 Product Owner 单独确认后，才可进入 `Phase 11 - Formal Order Minimum Loop`。
 
 ## 9. 当前结论
 
-Phase 9-Step 3 只定义 Phase 10 实施范围，没有实现权限代码。Phase 10 尚未开始，Phase 8 继续保持冻结。Phase 9 的规划目标至此基本完成；结束 Phase 9 或进入 Phase 10 仍需 Product Owner 单独确认。
+Phase 9-Step 3 定义的实施范围已经完成。Phase 10 角色访问最小原型已通过 Final Validation 并冻结，Phase 8 继续保持冻结。下一步是独立的 `Phase 11 Pre-Bridge Validation`；Phase 11 尚未开始，本文件不包含 Phase 11 实现设计。

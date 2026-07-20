@@ -1,8 +1,24 @@
 # Project Status
 
-## Phase 9-Step 3 — Define Phase 10 prototype surface - 2026-07-20
+## Phase 10 Freeze / Closure - 2026-07-20
 
-- 当前阶段：`Phase 9-Step 3 - Define Phase 10 prototype surface`
+- 当前阶段：`Phase 10 - Role Access Minimum Prototype` 已完成并冻结
+- 当前分支：`lufuta-material-system-lite`
+- 已验证实现基线：`0626200 apply remaining trial role views`
+- 当前测试基线：`node --test tests/*.test.js`，81/81 pass
+- 冻结文档：`PHASE10_FREEZE.md`
+
+Phase 10 已完成五个固定 Demo 角色、纯前端角色策略、内存态 `Demo Role Switcher`，以及“真实数据试算”页面的角色视图和动作边界接入。权限集中来自 `src/roleAccess.js`，UI 使用 `canRoleView` / `canRolePerform`；角色切换只改变看什么和能做什么，不改变 MRP、风险、缺料或采购建议计算。
+
+Phase 10 Final Validation 已通过：五角色连续切换后输入和结果保持一致，无角色间信息泄漏、权限绕过或 Phase 8 回归；四个只读角色无结果状态正常；375px / 390px 正常；控制台无错误；81/81 tests pass。验证时 Git clean，本地与远端为 0 ahead / 0 behind。
+
+Phase 10 完成后不直接进入 Phase 11。下一步为独立的 `Phase 11 Pre-Bridge Validation`，只验证角色边界、试算 / 接单评估到正式订单的转换点、正式订单最小数据结构、Phase 8 路径独立性，以及 Phase 11 能否在不破坏 Phase 8 / 10 的情况下开始。Phase 11 尚未开始。
+
+Phase 8 继续保持冻结。当前仍没有正式登录、用户数据库、后端权限、正式订单、供应商 / 采购单、库存执行、生产计划 / 工单、CRM、价格、成本、毛利或财务功能。
+
+## 历史状态：Phase 9-Step 3 — Define Phase 10 prototype surface - 2026-07-20
+
+- 当时阶段：`Phase 9-Step 3 - Define Phase 10 prototype surface`
 - 启动基线：`80e00de define minimum role access boundaries`
 - 当前分支：`lufuta-material-system-lite`
 - 当前测试基线：`node --test tests/*.test.js`，51/51 pass
@@ -19,11 +35,11 @@ Phase 10 建议使用固定五角色的 `Demo Role Switcher`，只保存前端�
 
 预计 Phase 10 最多涉及 `src/app.js`、`src/styles.css`、可选的 `src/roleAccess.js` 和新增的 `tests/roleAccess.test.js`。未经独立批准，不修改 `src/data.js`、`src/mrp.js` 或 `src/planning/*`。相同输入在所有角色下的 MRP、风险、缺料和采购建议结果必须完全一致。
 
-Phase 10 尚未开始，Phase 8 继续保持冻结。Phase 9 的规划目标至此基本完成；后续仍按 Phase 10 最小权限原型 → 四项桥接验证 → Phase 11 正式订单最小闭环推进。
+Phase 9-Step 3 完成时，Phase 10 尚未开始，Phase 8 继续保持冻结。该历史规划后来已按 Phase 10 最小权限原型 → Phase 11 Pre-Bridge Validation → Phase 11 正式订单最小闭环推进。
 
-## Phase 9-Step 2 — Define minimum role and information boundary rules - 2026-07-20
+## 历史状态：Phase 9-Step 2 — Define minimum role and information boundary rules - 2026-07-20
 
-- 当前阶段：`Phase 9-Step 2 - Define minimum role and information boundary rules`
+- 当时阶段：`Phase 9-Step 2 - Define minimum role and information boundary rules`
 - 启动基线：`c3a5404 define phase 9 product scope and role boundaries`
 - 当前分支：`lufuta-material-system-lite`
 - 当前测试基线：`node --test tests/*.test.js`，51/51 pass
@@ -36,13 +52,13 @@ Phase 10 最小原型的第一版优先角色确定为 Management / 管理层、
 
 敏感信息分为 Customer-sensitive、Sales-sensitive、Supplier-sensitive、Price / Cost / Margin、Internal Notes、Quantity 和 Operational Status。数量可见与价值 / 金额可见是两个不同权限维度；同一条业务记录可以按角色显示不同字段，但隐藏敏感字段不能妨碍角色完成本职工作。
 
-Phase 10 只需要验证不同角色看到不同内容、只读与可操作状态可区分、敏感字段隐藏后页面仍可用、同一数据可形成不同角色视图，以及权限层不改变 Phase 8 的 MRP 和风险计算结果。Phase 10 尚未开始，Phase 8 仍保持冻结。
+Phase 10 只需要验证不同角色看到不同内容、只读与可操作状态可区分、敏感字段隐藏后页面仍可用、同一数据可形成不同角色视图，以及权限层不改变 Phase 8 的 MRP 和风险计算结果。Phase 9-Step 2 完成时，Phase 10 尚未开始，Phase 8 仍保持冻结。
 
 后续顺序保持为：Phase 9 → Phase 10 最小权限原型 → 桥接验证 → Phase 11 正式订单最小闭环。
 
-## Phase 9-Step 1 — Document product scope and role boundary direction - 2026-07-20
+## 历史状态：Phase 9-Step 1 — Document product scope and role boundary direction - 2026-07-20
 
-- 当前阶段：`Phase 9-Step 1 - Document product scope and role boundary direction`
+- 当时阶段：`Phase 9-Step 1 - Document product scope and role boundary direction`
 - 中文定位：`产品范围与角色信息边界基础`
 - 启动基线：`40db6b6 freeze phase 8 real data trial flow`
 - 当前分支：`lufuta-material-system-lite`
@@ -64,7 +80,7 @@ Phase 9 当前只定义模块访问、操作、数据范围和字段可见原则
 
 Phase 8 不是未完成的中间状态。Phase 8 已完成并冻结一个独立可用的真实数据试算 / 接单评估演示闭环。Phase 9 是基于真实客户反馈扩展产品方向，不推翻、不替换 Phase 8，也不改变其冻结业务边界。
 
-Phase 10 尚未开始。Phase 11 尚未开始。
+Phase 9-Step 1 完成时，Phase 10 和 Phase 11 均尚未开始。
 
 ## Phase 8 Freeze - 2026-06-29
 

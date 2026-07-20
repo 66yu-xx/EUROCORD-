@@ -1,6 +1,21 @@
 # Roadmap
 
-## 当前里程碑：Phase 9-Step 3 — Define Phase 10 prototype surface
+## 当前里程碑：Phase 10 Freeze / Closure
+
+- 当前分支：`lufuta-material-system-lite`
+- 已验证实现基线：`0626200 apply remaining trial role views`
+- 当前测试基线：81/81 pass
+- 冻结文档：`PHASE10_FREEZE.md`
+
+`Phase 10 - Role Access Minimum Prototype` 已完成并冻结。五个固定 Demo 角色已接入“真实数据试算”页面；权限只改变信息视图和现有动作边界，不改变 MRP、风险、缺料或采购建议计算。Phase 8 继续保持独立冻结。
+
+下一里程碑是 `Phase 11 Pre-Bridge Validation`，不是 Phase 11 功能实现。该验证只确认角色边界是否足够支撑正式订单、试算 / 接单评估到正式订单的转换点、正式订单最小数据结构、Phase 8 路径独立性，以及 Phase 11 能否在不破坏 Phase 8 / 10 的情况下开始。
+
+只有 Pre-Bridge Validation 通过并由 Product Owner 单独确认 Phase 11 范围后，才可进入 `Phase 11 - Formal Order Minimum Loop`。
+
+当前顺序：Phase 9 已完成 → Phase 10 已完成并冻结 → Phase 11 Pre-Bridge Validation → Phase 11 正式订单最小闭环。
+
+## 已完成里程碑：Phase 9-Step 3 — Define Phase 10 prototype surface
 
 - 启动基线：`80e00de define minimum role access boundaries`
 - 当前分支：`lufuta-material-system-lite`
@@ -11,7 +26,7 @@ Phase 10 第一版只以“真实数据试算”为核心验证页面，固定�
 
 建议使用仅保存在前端临时状态的 `Demo Role Switcher`。预计技术范围最多为 `src/app.js`、`src/styles.css`、可选的 `src/roleAccess.js` 和新增的 `tests/roleAccess.test.js`；未经独立批准，不修改 `src/data.js`、`src/mrp.js` 或 `src/planning/*`。
 
-角色权限只能改变看什么、哪些区域或字段显示、哪些现有动作允许执行；相同输入下的 MRP、风险、缺料和采购建议结果必须完全一致。Phase 10 尚未开始，Phase 8 继续保持冻结，Phase 9 的规划目标至此基本完成。
+角色权限只能改变看什么、哪些区域或字段显示、哪些现有动作允许执行；相同输入下的 MRP、风险、缺料和采购建议结果必须完全一致。Phase 9-Step 3 完成时，Phase 10 尚未开始，Phase 8 继续保持冻结，Phase 9 的规划目标至此基本完成。
 
 后续顺序保持不变：Phase 9 → Phase 10 最小权限原型 → 四项桥接验证 → Phase 11 正式订单最小闭环。
 
@@ -26,7 +41,7 @@ Phase 10 第一版优先角色为管理层、销售、采购、仓库、生产�
 
 第一版规则使用 Module Access、View、Edit、Sensitive Field Visibility、Action Permission 五个维度，并区分客户敏感、销售敏感、供应商敏感、价格 / 成本 / 毛利、内部备注、数量和业务状态。Phase 10 不需要实现动态 RBAC、逐字段配置器或权限表达式语言。
 
-Phase 10 最小验证目标是确认角色视图差异、只读与可操作状态、敏感字段隐藏后的可用性、同一数据的不同角色展示，以及权限层不会改变 Phase 8 的 MRP 和风险计算结果。Phase 10 尚未开始，Phase 8 继续保持冻结。
+Phase 10 最小验证目标是确认角色视图差异、只读与可操作状态、敏感字段隐藏后的可用性、同一数据的不同角色展示，以及权限层不会改变 Phase 8 的 MRP 和风险计算结果。Phase 9-Step 2 完成时，Phase 10 尚未开始，Phase 8 继续保持冻结。
 
 阶段顺序保持不变：Phase 9 → Phase 10 最小权限原型 → 桥接验证 → Phase 11 正式订单最小闭环。
 
@@ -48,7 +63,7 @@ Phase 9 负责把上述反馈写入产品方向，定义第一版角色与信息
    只建立产品范围、初步角色模型、信息边界原则和阶段边界。
 2. `Phase 10 — Role Access Minimum Prototype`
    在 Phase 9 被单独确认完成后，才可设计并实现最小角色访问原型；当前步骤不进入 Phase 10。
-3. Phase 10 完成前桥接验证
+3. Phase 10 完成后的 `Phase 11 Pre-Bridge Validation`
    验证角色边界是否合理、接单评估到正式订单的转换点是否清楚、正式订单最小数据结构是否明确，以及 Phase 8 原流程是否仍正常。
 4. `Phase 11 — Formal Order Minimum Loop`
    只有桥接验证通过并由 Product Owner 单独确认范围后，才可进入正式订单最小闭环。
@@ -71,7 +86,7 @@ Phase 8-Step 15 和 Step 15B 已完成体验收口：运行试算后增加下一
 
 Phase 8 边界：当前仍不是正式订单系统，接单评估记录不等于正式订单；不确认接单、不作废业务记录、不转订单、不占用库存、不扣减库存、不生成采购需求或采购单、不计算金额、不进入财务 / 成本、不新增 Excel / CSV / PDF 导入、不修改核心 MRP / 风险计算逻辑、不自动保存接单评估记录。
 
-Phase 8 冻结时，Phase 9 尚未开始。当前已经进入仅文档范围定义性质的 `Phase 9-Step 3`，仍未开始 Phase 10 功能实现。Phase 9 不能直接跳入正式订单系统。
+Phase 8 冻结时，Phase 9 尚未开始；Phase 9-Step 3 当时只定义 Phase 10 实施范围。当前 Phase 10 已完成并冻结，下一步为 `Phase 11 Pre-Bridge Validation`，仍不能直接跳入正式订单系统。
 
 ## 当前里程碑：V3 / Phase 5 Freeze
 

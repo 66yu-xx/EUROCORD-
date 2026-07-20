@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-20 - Phase 10 Freeze / Closure
+
+- 新增 `PHASE10_FREEZE.md`，正式记录 Phase 10 角色访问最小原型已完成并冻结，已验证实现基线为 `0626200 apply remaining trial role views`。
+- 记录四个完成步骤：`10eb64e` 角色策略基础、`59bb6f3` Demo Role Switcher 状态、`76bfb05` Sales / Management 权限接入、`0626200` Purchasing / Warehouse / Production 只读视图接入。
+- 冻结五个 Demo 角色的最终信息和动作边界，并确认角色策略集中在 `src/roleAccess.js`，UI 继续通过 `canRoleView` / `canRolePerform` 使用策略。
+- 记录 Final Validation 通过：五角色连续切换后输入和结果一致，无信息泄漏、权限绕过或 Phase 8 回归；四个只读角色无结果状态正常；375px / 390px 正常；控制台无错误；81/81 tests pass。
+- 明确 Phase 10 不包含正式登录、用户数据库、后端权限、动态角色编辑器、正式订单、供应商 / 采购单、库存执行、生产计划 / 工单、CRM、价格、成本、毛利或财务功能。
+- 明确下一步为独立的 `Phase 11 Pre-Bridge Validation`，不是直接开始 Phase 11；本次文档收口不包含 Phase 11 实现设计。
+- 本次只修改项目文档，不修改业务代码，不新增功能，不执行 bridge implementation，不进入 Phase 11。
+
 ## 2026-07-20 - Phase 9-Step 3 — Define Phase 10 prototype surface
 
 - 新增 `PHASE10_PROTOTYPE_SCOPE.md`，把只读代码和页面盘点结论固定为 Phase 10 最小角色访问原型的实施边界。
