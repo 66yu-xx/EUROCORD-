@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-20 - Phase 9-Step 2 — Define minimum role and information boundary rules
+
+- 新增 `ROLE_ACCESS_MATRIX.md`，将 Phase 9-Step 1 的角色和信息边界原则整理为可指导 Phase 10 最小原型的第一版规则。
+- 确定 Phase 10 第一版优先角色为管理层、销售、采购、仓库、生产或车间；系统管理员、计划与物料、财务与成本、只读或审计及其他角色保留为后续扩展。
+- 为每个优先角色定义 Module Access、Can View、Can Act、Must Not See，并补充 View、Edit、Sensitive Field Visibility、Action Permission 的固定含义。
+- 敏感信息分类包括客户敏感、销售敏感、供应商敏感、价格 / 成本 / 毛利、内部备注、数量和业务状态；明确数量与价值 / 金额是不同权限维度，同一记录可按角色显示不同字段。
+- Phase 10 最小验证目标包括角色视图差异、只读与可操作状态、敏感字段隐藏后的可用性、同一数据的不同角色展示、Phase 8 原流程回归，以及权限层不改变 MRP / 风险结果。
+- 明确 Phase 10 不需要解决账号注册、密码找回、多租户、多工厂组织树、动态角色配置器、完整审批、完整审计、逐字段自定义权限界面、正式订单权限、财务权限或数据库权限同步。
+- 本步骤只修改文档，不开发登录、用户、权限、正式订单、库存执行、采购执行或财务功能；Phase 10 尚未开始，Phase 8 保持冻结。
+
 ## 2026-07-20 - Phase 9-Step 1 — Document product scope and role boundary direction
 
 - 正式启动 `Phase 9 — Product Scope & Role Boundary Foundation` 的第一步，中文定位为“产品范围与角色信息边界基础”。

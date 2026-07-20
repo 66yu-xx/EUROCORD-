@@ -1,5 +1,24 @@
 # Project Status
 
+## Phase 9-Step 2 — Define minimum role and information boundary rules - 2026-07-20
+
+- 当前阶段：`Phase 9-Step 2 - Define minimum role and information boundary rules`
+- 启动基线：`c3a5404 define phase 9 product scope and role boundaries`
+- 当前分支：`lufuta-material-system-lite`
+- 当前测试基线：`node --test tests/*.test.js`，51/51 pass
+- 角色边界规则：`ROLE_ACCESS_MATRIX.md`
+- 本步骤只设计规则，不实现登录、用户、角色或权限功能。
+
+Phase 10 最小原型的第一版优先角色确定为 Management / 管理层、Sales / 销售、Purchasing / 采购、Warehouse / 仓库、Production / Workshop / 生产或车间。System Admin、Planning / Material、Finance / Cost、Read-only / Audit 及其他未来角色保留为后续扩展，不是 Phase 10 的首批必做对象。
+
+第一版规则为每个优先角色定义 Module Access、View、Edit、Sensitive Field Visibility 和 Action Permission，并分别记录 Can View、Can Act、Must Not See。规则只基于 Phase 8 已存在的真实数据试算、风险结果和本地接单评估记录；当前可执行动作必须基于 Phase 8 已有能力。尚不存在的客户、销售、供应商、正式生产计划、价格、成本、毛利等敏感字段，只能作为未来信息边界或模拟权限概念；Phase 10 不得因此新增正式业务模块或数据模型，也不得假设正式订单、采购单、库存执行或财务模块已经存在。
+
+敏感信息分为 Customer-sensitive、Sales-sensitive、Supplier-sensitive、Price / Cost / Margin、Internal Notes、Quantity 和 Operational Status。数量可见与价值 / 金额可见是两个不同权限维度；同一条业务记录可以按角色显示不同字段，但隐藏敏感字段不能妨碍角色完成本职工作。
+
+Phase 10 只需要验证不同角色看到不同内容、只读与可操作状态可区分、敏感字段隐藏后页面仍可用、同一数据可形成不同角色视图，以及权限层不改变 Phase 8 的 MRP 和风险计算结果。Phase 10 尚未开始，Phase 8 仍保持冻结。
+
+后续顺序保持为：Phase 9 → Phase 10 最小权限原型 → 桥接验证 → Phase 11 正式订单最小闭环。
+
 ## Phase 9-Step 1 — Document product scope and role boundary direction - 2026-07-20
 
 - 当前阶段：`Phase 9-Step 1 - Document product scope and role boundary direction`

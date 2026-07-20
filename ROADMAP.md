@@ -1,6 +1,21 @@
 # Roadmap
 
-## 当前里程碑：Phase 9-Step 1 — Document product scope and role boundary direction
+## 当前里程碑：Phase 9-Step 2 — Define minimum role and information boundary rules
+
+- 启动基线：`c3a5404 define phase 9 product scope and role boundaries`
+- 当前分支：`lufuta-material-system-lite`
+- 规则文档：`ROLE_ACCESS_MATRIX.md`
+- 当前步骤只把角色与权限原则整理成可指导 Phase 10 最小原型的第一版固定规则，不实现功能。
+
+Phase 10 第一版优先角色为管理层、销售、采购、仓库、生产或车间；系统管理员、计划与物料、财务与成本、只读或审计及其他角色后续扩展。首批角色只需足够验证不同角色看到不同信息、拥有不同操作权限，不建立完整组织架构。
+
+第一版规则使用 Module Access、View、Edit、Sensitive Field Visibility、Action Permission 五个维度，并区分客户敏感、销售敏感、供应商敏感、价格 / 成本 / 毛利、内部备注、数量和业务状态。Phase 10 不需要实现动态 RBAC、逐字段配置器或权限表达式语言。
+
+Phase 10 最小验证目标是确认角色视图差异、只读与可操作状态、敏感字段隐藏后的可用性、同一数据的不同角色展示，以及权限层不会改变 Phase 8 的 MRP 和风险计算结果。Phase 10 尚未开始，Phase 8 继续保持冻结。
+
+阶段顺序保持不变：Phase 9 → Phase 10 最小权限原型 → 桥接验证 → Phase 11 正式订单最小闭环。
+
+## 已完成里程碑：Phase 9-Step 1 — Document product scope and role boundary direction
 
 - 中文定位：`产品范围与角色信息边界基础`
 - 启动基线：`40db6b6 freeze phase 8 real data trial flow`
@@ -41,7 +56,7 @@ Phase 8-Step 15 和 Step 15B 已完成体验收口：运行试算后增加下一
 
 Phase 8 边界：当前仍不是正式订单系统，接单评估记录不等于正式订单；不确认接单、不作废业务记录、不转订单、不占用库存、不扣减库存、不生成采购需求或采购单、不计算金额、不进入财务 / 成本、不新增 Excel / CSV / PDF 导入、不修改核心 MRP / 风险计算逻辑、不自动保存接单评估记录。
 
-Phase 8 冻结时，Phase 9 尚未开始。当前已经进入仅文档规划性质的 `Phase 9-Step 1`，尚未开始 Phase 9 的功能实现。Phase 9 不能直接跳入正式订单系统。
+Phase 8 冻结时，Phase 9 尚未开始。当前已经进入仅文档规则设计性质的 `Phase 9-Step 2`，尚未开始 Phase 9 的功能实现。Phase 9 不能直接跳入正式订单系统。
 
 ## 当前里程碑：V3 / Phase 5 Freeze
 

@@ -4,13 +4,14 @@
 
 ## 1. 文档状态
 
-- 当前步骤：`Phase 9-Step 1 - Document product scope and role boundary direction`
+- 当前步骤：`Phase 9-Step 2 - Define minimum role and information boundary rules`
 - 启动日期：2026-07-20
-- 启动基线：`40db6b6 freeze phase 8 real data trial flow`
+- Step 1 完成基线：`c3a5404 define phase 9 product scope and role boundaries`
 - 当前分支：`lufuta-material-system-lite`
+- 第一版角色边界规则：`ROLE_ACCESS_MATRIX.md`
 - 当前性质：产品方向与边界文档，不是功能实现
 
-Phase 9-Step 1 只把真实客户反馈、初步角色模型、信息边界原则和后续阶段顺序写清楚。本文档不创建登录、用户、角色、权限、订单、库存、采购、成本或财务功能，也不改变现有运行行为。
+Phase 9-Step 1 已把真实客户反馈、初步角色模型、信息边界原则和后续阶段顺序写清楚。Phase 9-Step 2 只把这些原则整理为可指导 Phase 10 最小原型的第一版固定规则，不创建登录、用户、角色、权限、订单、库存、采购、成本或财务功能，也不改变现有运行行为。
 
 ## 2. 与 Phase 8 的关系
 
@@ -171,4 +172,41 @@ Phase 9 的产出是可供后续原型设计使用的边界基础，不是完整
 - 多角色用户和关键操作记录原则已记录。
 - Phase 9、Phase 10、桥接验证、Phase 11 的顺序已记录。
 - Phase 8 的独立完成状态和冻结边界已保留。
+- 本步骤只修改文档，不修改业务代码、数据模型或测试。
+
+## 10. Phase 9-Step 2 第一版最小规则
+
+Phase 9-Step 2 将 Phase 10 最小原型的优先角色收敛为：
+
+- Management / 管理层
+- Sales / 销售
+- Purchasing / 采购
+- Warehouse / 仓库
+- Production / Workshop / 生产或车间
+
+System Admin、Planning / Material、Finance / Cost、Read-only / Audit 及其他未来角色保留为后续扩展，不是 Phase 10 第一版必须实现的对象。Phase 10 只需要足够验证不同角色看到不同信息、拥有不同操作权限，不需要一次建立完整组织架构。
+
+第一版规则使用以下五个权限维度：
+
+- Module Access
+- View
+- Edit
+- Sensitive Field Visibility
+- Action Permission
+
+敏感信息按 Customer-sensitive、Sales-sensitive、Supplier-sensitive、Price / Cost / Margin、Internal Notes、Quantity、Operational Status 分类。数量可见不代表价值 / 金额可见；同一条业务记录可以按角色显示不同字段；敏感字段隐藏后仍必须保留完成角色职责所需的信息。
+
+各角色的 Can View、Can Act、Must Not See、固定动作权限、敏感信息处理和 Phase 10 验证标准统一记录在 `ROLE_ACCESS_MATRIX.md`。该规则不设计复杂 RBAC 引擎、动态角色配置器、逐字段权限界面或权限表达式语言。
+
+Phase 10 尚未开始。Phase 8 保持冻结，权限层未来只能影响“看什么 / 能做什么”，不能改变相同输入下的 MRP 和风险计算结果。
+
+## 11. Phase 9-Step 2 完成标准
+
+- Phase 10 第一版优先角色和后续扩展角色已分层。
+- 每个优先角色的 Can View、Can Act、Must Not See 已定义。
+- Module Access、View、Edit、Sensitive Field Visibility、Action Permission 已形成最小固定模型。
+- 第一版敏感信息分类和数量 / 金额分离原则已定义。
+- Phase 10 的六项最小验证目标和明确不解决的问题已记录。
+- Phase 8 冻结边界和 MRP / 风险计算一致性要求已保留。
+- Phase 10 尚未开始，后续阶段顺序未改变。
 - 本步骤只修改文档，不修改业务代码、数据模型或测试。
